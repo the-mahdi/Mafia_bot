@@ -1,3 +1,8 @@
 tmp
-.db
+*.db
+*.db-shm
+*.db-wal
 token.txt
+build/
+dist/
+MafiaBot.spec
