@@ -1,4 +1,3 @@
-# main.py
 import logging
 from telegram.ext import Application
 from config import TOKEN
@@ -14,7 +13,7 @@ def setup_logging():
 
     # Create handlers
     console_handler = logging.StreamHandler()
-    file_handler = logging.FileHandler('mafia_bot.log')  # Optional: log to a file
+    file_handler = logging.FileHandler('mafia_bot.log')
 
     # Create formatters and add them to handlers
     formatter = logging.Formatter(
