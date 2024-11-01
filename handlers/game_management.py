@@ -1,138 +1,22 @@
+# handlers/game_management.py
 import sqlite3
+from telegram import InlineKeyboardMarkup, InlineKeyboardButton
+from telegram.ext import ContextTypes
+import logging
 import uuid
 import asyncio
 import random
 import aiohttp
+from db import conn, cursor
+from roles import available_roles, role_descriptions, role_templates
+from utils import resource_path
+from config import RANDOM_ORG_API_KEY
 import json
-from telegram import InlineKeyboardMarkup, InlineKeyboardButton
-from telegram.ext import (
-    Application, CommandHandler, CallbackQueryHandler,
-    MessageHandler, filters, ContextTypes
-)
-import logging
-import sys
-import os
 
-def resource_path(relative_path):
-    """ Get absolute path to resource, works for dev and for PyInstaller """
-    try:
-        # PyInstaller creates a temp folder and stores path in _MEIPASS
-        base_path = sys._MEIPASS
-    except Exception:
-        base_path = os.path.abspath(".")
-
-    return os.path.join(base_path, relative_path)
-
-
-# Create a logger for your application
-logger = logging.getLogger("Mafia Bot")
-logger.setLevel(logging.DEBUG)
-
-# Set up basic configuration for the logger
-handler = logging.StreamHandler()
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-handler.setFormatter(formatter)
-logger.addHandler(handler)
-
-# Read the API tokens from token.txt
-with open(resource_path('token.txt'), 'r') as file:
-    lines = [line.strip() for line in file.readlines()]
-    if len(lines) < 2:
-        logger.error("token.txt must contain at least two lines: Telegram token and Random.org API key.")
-        exit(1)
-    TOKEN = lines[0]
-    RANDOM_ORG_API_KEY = lines[1]
-
-# Connect to the SQLite database with WAL mode for better concurrency
-conn = sqlite3.connect(resource_path('mafia_game.db'), check_same_thread=False)
-conn.execute("PRAGMA journal_mode=WAL;")
-cursor = conn.cursor()
-
-# Create tables for Users, Games, Roles, and GameRoles
-cursor.execute('''
-    CREATE TABLE IF NOT EXISTS Users (
-        user_id INTEGER PRIMARY KEY,
-        username TEXT,
-        last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-''')
-
-cursor.execute('''
-    CREATE TABLE IF NOT EXISTS Games (
-        game_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        passcode TEXT UNIQUE,
-        moderator_id INTEGER,
-        started INTEGER DEFAULT 0,
-        randomness_method TEXT DEFAULT 'fallback (local random)',
-        FOREIGN KEY (moderator_id) REFERENCES Users(user_id)
-    )
-''')
-
-
-cursor.execute('''
-    CREATE TABLE IF NOT EXISTS Roles (
-        game_id INTEGER,
-        user_id INTEGER,
-        role TEXT,
-        FOREIGN KEY (game_id) REFERENCES Games(game_id),
-        FOREIGN KEY (user_id) REFERENCES Users(user_id),
-        PRIMARY KEY (game_id, user_id)
-    )
-''')
-
-
-cursor.execute('''
-    CREATE TABLE IF NOT EXISTS GameRoles (
-        game_id INTEGER,
-        role TEXT,
-        count INTEGER,
-        FOREIGN KEY (game_id) REFERENCES Games(game_id),
-        PRIMARY KEY (game_id, role)
-    )
-''')
-
-conn.commit()
-
-# Ensure randomness_method column exists
-cursor.execute("""
-    PRAGMA table_info(Games)
-""")
-columns = [info[1] for info in cursor.fetchall()]
-if 'randomness_method' not in columns:
-    cursor.execute("ALTER TABLE Games ADD COLUMN randomness_method TEXT DEFAULT 'fallback (local random)'")
-    conn.commit()
+logger = logging.getLogger("Mafia Bot GameManagement")
 
 # Initialize an asyncio lock for synchronization
 role_counts_lock = asyncio.Lock()
-
-# Read the available roles from list_roles.txt
-with open(resource_path('list_roles.txt'), 'r') as file:
-    available_roles = [line.strip() for line in file if line.strip()]
-logger.debug(f"Available roles: {available_roles}")
-
-def read_role_descriptions():
-    descriptions = {}
-    with open(resource_path('role_descriptions.txt'), 'r') as file:
-        for line in file:
-            if ':' in line:
-                role, description = line.strip().split(':', 1)
-                descriptions[role.strip()] = description.strip()
-    return descriptions
-
-role_descriptions = read_role_descriptions()
-
-# Ensure every available role has a description
-for role in available_roles:
-    if role not in role_descriptions:
-        role_descriptions[role] = "No description available for this role."
-
-# Load role templates
-def load_role_templates():
-    with open(resource_path('role_templates.json'), 'r') as file:
-        return json.load(file).get('templates', {})
-
-role_templates = load_role_templates()
-logger.debug(f"Loaded role templates: {role_templates}")
 
 async def get_random_shuffle(lst: list, api_key: str) -> list:
     """
@@ -181,19 +65,6 @@ async def get_random_shuffle(lst: list, api_key: str) -> list:
         logger.error(f"Exception while fetching shuffle from Random.org: {e}")
         return None
 
-async def start(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE) -> None:
-    logger.debug("In async def start")
-    keyboard = [
-        [InlineKeyboardButton("Create Game", callback_data="create_game")],
-        [InlineKeyboardButton("Join Game", callback_data="join_game")],
-        [InlineKeyboardButton("Set Roles", callback_data="set_roles")],
-        [InlineKeyboardButton("Select Template", callback_data="select_template")],  # New Button
-        [InlineKeyboardButton("Start Game", callback_data="start_game")]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    message = "Welcome to the Mafia Game Bot!"
-    await context.bot.send_message(chat_id=update.effective_chat.id, text=message, reply_markup=reply_markup)
-
 def get_player_count(game_id: int) -> int:
     cursor.execute("SELECT COUNT(*) FROM Roles WHERE game_id = ?", (game_id,))
     count = cursor.fetchone()[0]
@@ -206,7 +77,7 @@ def get_templates_for_player_count(player_count: int) -> list:
     return templates
 
 async def show_role_buttons(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE, message_id=None) -> int:
-    logger.debug("In async def show_role_buttons")
+    logger.debug("Displaying role buttons.")
     game_id = context.user_data.get('game_id')
     if not game_id:
         await context.bot.send_message(chat_id=update.effective_chat.id, text="No game selected.")
@@ -254,7 +125,7 @@ async def show_role_buttons(update: ContextTypes.DEFAULT_TYPE, context: ContextT
         return sent_message.message_id  # Return the new message_id
 
 async def confirm_and_set_roles(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE, game_id: int) -> (bool, str):
-    logger.debug("In async def confirm_and_set_roles")
+    logger.debug("Confirming and setting roles.")
     cursor.execute("SELECT user_id FROM Roles WHERE game_id = ?", (game_id,))
     users = [r[0] for r in cursor.fetchall()]
     logger.debug(f"Users in game ID {game_id}: {users}")
@@ -331,200 +202,8 @@ async def confirm_and_set_roles(update: ContextTypes.DEFAULT_TYPE, context: Cont
         logger.error(f"Failed to set roles due to error: {e}")
         return False, method_used
 
-async def button_handler(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE) -> None:
-    logger.debug("In async def button_handler")
-    query = update.callback_query
-    await query.answer()
-    data = query.data
-    message_id = query.message.message_id
-    user_id = update.effective_user.id
-
-    # Retrieve game_id from user_data
-    game_id = context.user_data.get('game_id')
-
-    if data == "back_to_menu":
-        logger.debug("back_to_menu button pressed")
-        await start(update, context)  # Return to the main menu
-
-    elif data == "reset_roles":
-        logger.debug("reset_roles button pressed")
-        if not game_id:
-            await context.bot.send_message(chat_id=update.effective_chat.id, text="No game selected.")
-            return
-        async with role_counts_lock:
-            cursor.execute("DELETE FROM GameRoles WHERE game_id = ?", (game_id,))
-            # Initialize role counts to 0 for all roles
-            for role in available_roles:
-                cursor.execute(
-                    "INSERT INTO GameRoles (game_id, role, count) VALUES (?, ?, 0) ON CONFLICT(game_id, role) DO UPDATE SET count=0",
-                    (game_id, role)
-                )
-            conn.commit()
-        await show_role_buttons(update, context, message_id)
-
-    elif data == "create_game":
-        logger.debug("create_game button pressed")
-        await create_game(update, context)
-
-    elif data == "join_game":
-        logger.debug("join_game button pressed")
-        context.user_data["action"] = "awaiting_name"
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="Please enter your name.")
-
-    elif data == "set_roles":
-        logger.debug("set_roles button pressed")
-        if not game_id:
-            await context.bot.send_message(chat_id=update.effective_chat.id, text="No game selected.")
-            return
-        # Check if the user is the moderator
-        cursor.execute("SELECT moderator_id FROM Games WHERE game_id = ?", (game_id,))
-        result = cursor.fetchone()
-        if not result or result[0] != user_id:
-            await context.bot.send_message(chat_id=update.effective_chat.id, text="You are not authorized to set roles.")
-            return
-        context.user_data["action"] = "set_roles"
-        await show_role_buttons(update, context)
-
-    elif data == "start_game":
-        logger.debug("start_game button pressed")
-        if not game_id:
-            await context.bot.send_message(chat_id=update.effective_chat.id, text="No game selected.")
-            return
-        # Check if the user is the moderator
-        cursor.execute("SELECT moderator_id FROM Games WHERE game_id = ?", (game_id,))
-        result = cursor.fetchone()
-        if not result or result[0] != user_id:
-            await context.bot.send_message(chat_id=update.effective_chat.id, text="You are not authorized to start the game.")
-            return
-        context.user_data["action"] = "start_game"
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="Please enter the passcode to start the game.")
-
-    elif data == "select_template":
-        logger.debug("select_template button pressed")
-        if not game_id:
-            await context.bot.send_message(chat_id=update.effective_chat.id, text="No game selected.")
-            return
-        player_count = get_player_count(game_id)
-        templates = get_templates_for_player_count(player_count)
-        if not templates:
-            await context.bot.send_message(chat_id=update.effective_chat.id, text=f"No templates available for {player_count} players.")
-            return
-        # Create buttons for each template
-        template_buttons = [
-            [InlineKeyboardButton(template['name'], callback_data=f"template_{template['name']}")]
-            for template in templates
-        ]
-        # Add a back button
-        template_buttons.append([InlineKeyboardButton("Back to Menu", callback_data="back_to_menu")])
-        reply_markup = InlineKeyboardMarkup(template_buttons)
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="Select a role template:", reply_markup=reply_markup)
-
-    elif data.startswith("template_"):
-        template_name = data.split("template_", 1)[1]
-        logger.debug(f"Template selected: {template_name}")
-        if not game_id:
-            await context.bot.send_message(chat_id=update.effective_chat.id, text="No game selected.")
-            return
-        # Find the selected template
-        player_count = get_player_count(game_id)
-        templates = get_templates_for_player_count(player_count)
-        selected_template = next((t for t in templates if t['name'] == template_name), None)
-        if not selected_template:
-            await context.bot.send_message(chat_id=update.effective_chat.id, text="Selected template not found.")
-            return
-        # Set the roles based on the template
-        async with role_counts_lock:
-            for role, count in selected_template['roles'].items():
-                cursor.execute("""
-                    INSERT INTO GameRoles (game_id, role, count) 
-                    VALUES (?, ?, ?) 
-                    ON CONFLICT(game_id, role) 
-                    DO UPDATE SET count=excluded.count
-                """, (game_id, role, count))
-            conn.commit()
-        await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Template '{template_name}' has been applied.")
-        # Refresh the role buttons to reflect the new counts
-        await show_role_buttons(update, context, message_id)
-
-    elif data.startswith("increase_"):
-        logger.debug(f"{data} button pressed")
-        role = data.split("_", 1)[1]
-        if role not in available_roles:
-            await context.bot.send_message(chat_id=update.effective_chat.id, text="Invalid role.")
-            return
-        if not game_id:
-            await context.bot.send_message(chat_id=update.effective_chat.id, text="No game selected.")
-            return
-        async with role_counts_lock:
-            cursor.execute(
-                "INSERT INTO GameRoles (game_id, role, count) VALUES (?, ?, 0) ON CONFLICT(game_id, role) DO UPDATE SET count = count + 1",
-                (game_id, role)
-            )
-            conn.commit()
-        await show_role_buttons(update, context, message_id)
-
-    elif data.startswith("decrease_"):
-        logger.debug(f"{data} button pressed")
-        role = data.split("_", 1)[1]
-        if role not in available_roles:
-            await context.bot.send_message(chat_id=update.effective_chat.id, text="Invalid role.")
-            return
-        if not game_id:
-            await context.bot.send_message(chat_id=update.effective_chat.id, text="No game selected.")
-            return
-        async with role_counts_lock:
-            cursor.execute("SELECT count FROM GameRoles WHERE game_id = ? AND role = ?", (game_id, role))
-            result = cursor.fetchone()
-            current_count = result[0] if result else 0
-            if current_count > 0:
-                cursor.execute(
-                    "UPDATE GameRoles SET count = count - 1 WHERE game_id = ? AND role = ?",
-                    (game_id, role)
-                )
-                logger.debug(f"Role count for {role} decreased to {current_count - 1}")
-            else:
-                logger.debug(f"Role count for {role} is already 0. Cannot decrease further.")
-            conn.commit()
-        await show_role_buttons(update, context, message_id)
-
-    elif data == "confirm_roles":
-        logger.debug("confirm_roles button pressed")
-        if not game_id:
-            await context.bot.send_message(chat_id=update.effective_chat.id, text="No game selected.")
-            return
-        success, method = await confirm_and_set_roles(update, context, game_id)
-        if not success:
-            await context.bot.send_message(chat_id=update.effective_chat.id, text="Error setting roles. Please try again.")
-        else:
-            await context.bot.send_message(
-                chat_id=update.effective_chat.id,
-                text=f"Roles have been confirmed and set successfully!\nRandomness source: {method}."
-            )
-
-    else:
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="Unknown action.")
-
-async def passcode_handler(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE) -> None:
-    logger.debug("In async def passcode_handler")
-    user_input = update.message.text.strip()
-    action = context.user_data.get("action")
-
-    if action == "awaiting_name":
-        context.user_data["username"] = user_input
-        context.user_data["action"] = "join_game"  # Now expecting a passcode
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="Please enter the passcode to join the game.")
-    elif action == "join_game":
-        await join_game(update, context, user_input)  # Pass user_input as the passcode
-    elif action == "set_roles":
-        # In the revised flow, roles are set via buttons, so passcode is not needed here
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="Please use the role buttons to set roles.")
-    elif action == "start_game":
-        await start_game(update, context, user_input)
-    else:
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="Unknown action. Please use /start to begin.")
-
 async def create_game(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE) -> None:
-    logger.debug("In async def create_game")
+    logger.debug("Creating a new game.")
     user_id = update.effective_user.id
 
     # Generate a secure UUID-based passcode
@@ -553,7 +232,7 @@ async def create_game(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.D
         await context.bot.send_message(chat_id=update.effective_chat.id, text="Failed to create game. Please try again.")
 
 async def join_game(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE, passcode: str) -> None:
-    logger.debug("In async def join_game")
+    logger.debug("User attempting to join a game.")
     user_id = update.effective_user.id
     username = context.user_data.get("username", f"User{user_id}")
 
@@ -594,7 +273,7 @@ async def join_game(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEF
         await context.bot.send_message(chat_id=update.effective_chat.id, text=message)
 
 async def start_game(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE, passcode: str) -> None:
-    logger.debug("In async def start_game")
+    logger.debug("Starting the game.")
     user_id = update.effective_user.id
 
     cursor.execute("SELECT game_id, moderator_id, started, randomness_method FROM Games WHERE passcode = ?", (passcode,))
@@ -728,7 +407,6 @@ async def start_game(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DE
 
     # --------------------- Send the roles, their count, and descriptions to all players ---------------------
 
-
     # Mark the game as started
     cursor.execute("UPDATE Games SET started = 1 WHERE game_id = ?", (game_id,))
     conn.commit()
@@ -739,20 +417,6 @@ async def start_game(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DE
     logger.debug(f"Game {game_id} started using {randomness_method}")
 
 async def set_roles(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE) -> None:
-    logger.debug("In async def set_roles")
+    logger.debug("Setting roles.")
     # This function can be expanded if additional functionality is needed
     await show_role_buttons(update, context)
-
-def main():
-    application = Application.builder().token(TOKEN).build()
-
-    # Register handlers
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(CallbackQueryHandler(button_handler))
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, passcode_handler))
-
-    # Run the bot
-    application.run_polling()
-
-if __name__ == "__main__":
-    main()
