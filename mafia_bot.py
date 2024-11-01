@@ -126,6 +126,14 @@ for role in available_roles:
     if role not in role_descriptions:
         role_descriptions[role] = "No description available for this role."
 
+# Load role templates
+def load_role_templates():
+    with open(resource_path('role_templates.json'), 'r') as file:
+        return json.load(file).get('templates', {})
+
+role_templates = load_role_templates()
+logger.debug(f"Loaded role templates: {role_templates}")
+
 async def get_random_shuffle(lst: list, api_key: str) -> list:
     """
     Shuffles a list using Random.org's generateIntegerSequences API. Returns the shuffled list if successful,
@@ -179,11 +187,23 @@ async def start(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT
         [InlineKeyboardButton("Create Game", callback_data="create_game")],
         [InlineKeyboardButton("Join Game", callback_data="join_game")],
         [InlineKeyboardButton("Set Roles", callback_data="set_roles")],
+        [InlineKeyboardButton("Select Template", callback_data="select_template")],  # New Button
         [InlineKeyboardButton("Start Game", callback_data="start_game")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     message = "Welcome to the Mafia Game Bot!"
     await context.bot.send_message(chat_id=update.effective_chat.id, text=message, reply_markup=reply_markup)
+
+def get_player_count(game_id: int) -> int:
+    cursor.execute("SELECT COUNT(*) FROM Roles WHERE game_id = ?", (game_id,))
+    count = cursor.fetchone()[0]
+    logger.debug(f"Game ID {game_id} has {count} players.")
+    return count
+
+def get_templates_for_player_count(player_count: int) -> list:
+    templates = role_templates.get(str(player_count), [])
+    logger.debug(f"Templates for player count {player_count}: {templates}")
+    return templates
 
 async def show_role_buttons(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE, message_id=None) -> int:
     logger.debug("In async def show_role_buttons")
@@ -311,7 +331,6 @@ async def confirm_and_set_roles(update: ContextTypes.DEFAULT_TYPE, context: Cont
         logger.error(f"Failed to set roles due to error: {e}")
         return False, method_used
 
-
 async def button_handler(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE) -> None:
     logger.debug("In async def button_handler")
     query = update.callback_query
@@ -380,7 +399,53 @@ async def button_handler(update: ContextTypes.DEFAULT_TYPE, context: ContextType
         context.user_data["action"] = "start_game"
         await context.bot.send_message(chat_id=update.effective_chat.id, text="Please enter the passcode to start the game.")
 
-    # Handle increase role count
+    elif data == "select_template":
+        logger.debug("select_template button pressed")
+        if not game_id:
+            await context.bot.send_message(chat_id=update.effective_chat.id, text="No game selected.")
+            return
+        player_count = get_player_count(game_id)
+        templates = get_templates_for_player_count(player_count)
+        if not templates:
+            await context.bot.send_message(chat_id=update.effective_chat.id, text=f"No templates available for {player_count} players.")
+            return
+        # Create buttons for each template
+        template_buttons = [
+            [InlineKeyboardButton(template['name'], callback_data=f"template_{template['name']}")]
+            for template in templates
+        ]
+        # Add a back button
+        template_buttons.append([InlineKeyboardButton("Back to Menu", callback_data="back_to_menu")])
+        reply_markup = InlineKeyboardMarkup(template_buttons)
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="Select a role template:", reply_markup=reply_markup)
+
+    elif data.startswith("template_"):
+        template_name = data.split("template_", 1)[1]
+        logger.debug(f"Template selected: {template_name}")
+        if not game_id:
+            await context.bot.send_message(chat_id=update.effective_chat.id, text="No game selected.")
+            return
+        # Find the selected template
+        player_count = get_player_count(game_id)
+        templates = get_templates_for_player_count(player_count)
+        selected_template = next((t for t in templates if t['name'] == template_name), None)
+        if not selected_template:
+            await context.bot.send_message(chat_id=update.effective_chat.id, text="Selected template not found.")
+            return
+        # Set the roles based on the template
+        async with role_counts_lock:
+            for role, count in selected_template['roles'].items():
+                cursor.execute("""
+                    INSERT INTO GameRoles (game_id, role, count) 
+                    VALUES (?, ?, ?) 
+                    ON CONFLICT(game_id, role) 
+                    DO UPDATE SET count=excluded.count
+                """, (game_id, role, count))
+            conn.commit()
+        await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Template '{template_name}' has been applied.")
+        # Refresh the role buttons to reflect the new counts
+        await show_role_buttons(update, context, message_id)
+
     elif data.startswith("increase_"):
         logger.debug(f"{data} button pressed")
         role = data.split("_", 1)[1]
@@ -398,7 +463,6 @@ async def button_handler(update: ContextTypes.DEFAULT_TYPE, context: ContextType
             conn.commit()
         await show_role_buttons(update, context, message_id)
 
-    # Handle decrease role count
     elif data.startswith("decrease_"):
         logger.debug(f"{data} button pressed")
         role = data.split("_", 1)[1]
@@ -423,7 +487,6 @@ async def button_handler(update: ContextTypes.DEFAULT_TYPE, context: ContextType
             conn.commit()
         await show_role_buttons(update, context, message_id)
 
-    # Handle confirm roles action
     elif data == "confirm_roles":
         logger.debug("confirm_roles button pressed")
         if not game_id:
@@ -674,7 +737,6 @@ async def start_game(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DE
         text=f"The game has started! Roles, descriptions, and randomness methodology have been sent to all players. Method used: {randomness_method}"
     )
     logger.debug(f"Game {game_id} started using {randomness_method}")
-
 
 async def set_roles(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE) -> None:
     logger.debug("In async def set_roles")

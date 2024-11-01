@@ -1,5 +1,13 @@
 {
     "templates": {
+      "1": [
+        {
+          "name": "Debug",
+          "roles": {
+            "MafiaSa": 1
+          }
+        }
+      ],
       "9": [
         {
           "name": "Basic",
