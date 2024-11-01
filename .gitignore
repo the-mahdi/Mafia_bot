@@ -8,3 +8,4 @@ dist/
 MafiaBot.spec
 build_notes.txt
 __pycache__/
+__pycache__
