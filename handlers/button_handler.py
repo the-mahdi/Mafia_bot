@@ -1,14 +1,13 @@
-# handlers/button_handler.py
 from telegram import InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import CallbackQueryHandler, ContextTypes
 import logging
 from db import conn, cursor
-from roles import available_roles, role_descriptions, role_templates
+from roles import available_roles, role_descriptions, role_templates, save_role_templates
 from handlers.game_management import (
-    show_role_buttons, 
-    confirm_and_set_roles, 
+    show_role_buttons,
+    confirm_and_set_roles,
     get_player_count,
-    get_templates_for_player_count, 
+    get_templates_for_player_count,
     get_random_shuffle,
     create_game,
     join_game,
@@ -128,9 +127,9 @@ async def handle_button(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes
         async with role_counts_lock:
             for role, count in selected_template['roles'].items():
                 cursor.execute("""
-                    INSERT INTO GameRoles (game_id, role, count) 
-                    VALUES (?, ?, ?) 
-                    ON CONFLICT(game_id, role) 
+                    INSERT INTO GameRoles (game_id, role, count)
+                    VALUES (?, ?, ?)
+                    ON CONFLICT(game_id, role)
                     DO UPDATE SET count=excluded.count
                 """, (game_id, role, count))
             conn.commit()
@@ -145,8 +144,8 @@ async def handle_button(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes
             await context.bot.send_message(chat_id=update.effective_chat.id, text="Invalid role.")
             return
         if not game_id:
-            await context.bot.send_message(chat_id=update.effective_chat.id, text="No game selected.")
-            return
+           await context.bot.send_message(chat_id=update.effective_chat.id, text="No game selected.")
+           return
         async with role_counts_lock:
             cursor.execute(
                 "INSERT INTO GameRoles (game_id, role, count) VALUES (?, ?, 0) ON CONFLICT(game_id, role) DO UPDATE SET count = count + 1",
@@ -193,8 +192,48 @@ async def handle_button(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes
                 text=f"Roles have been confirmed and set successfully!\nRandomness source: {method}."
             )
 
+    # Save role template functionality
+    elif data == "save_template":
+      logger.debug("save_template button pressed.")
+      if not game_id:
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="No game selected.")
+        return
+      context.user_data['action'] = 'awaiting_template_name'
+      await context.bot.send_message(chat_id=update.effective_chat.id, text="Please enter the name for this template.")
+    elif data == "template_creation":
+        # This is an example, you can use to call this as a start
+        await create_new_template(update,context)
+
     else:
         await context.bot.send_message(chat_id=update.effective_chat.id, text="Unknown action.")
+
+# Function to handle template creation
+async def create_new_template(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE) -> None:
+    logger.debug("Template creation initiated.")
+    if not context.user_data.get('game_id'):
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="No game selected.")
+        return
+    # Create a template name
+    player_count = get_player_count(context.user_data.get('game_id'))
+    template_name = f"Template {player_count} Players"
+    context.user_data["action"] = "create_template"
+    context.user_data["template_name"] = template_name
+
+    # Fetch role counts from DB
+    game_id = context.user_data.get('game_id')
+    cursor.execute("SELECT role, count FROM GameRoles WHERE game_id = ?", (game_id,))
+    roles_data = cursor.fetchall()
+    
+    # Create a dict of roles
+    role_counts = {role: count for role, count in roles_data if count > 0}
+
+    if not role_counts:
+         await context.bot.send_message(chat_id=update.effective_chat.id, text="No roles set, please set roles before saving a template.")
+         return
+    
+    context.user_data['roles_for_template'] = role_counts
+    
+    await context.bot.send_message(chat_id=update.effective_chat.id, text=f"The template name is: '{template_name}'. If you don't like it, please enter another name:")
 
 # Create the handler instance
 button_handler = CallbackQueryHandler(handle_button)
