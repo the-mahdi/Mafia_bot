@@ -59,8 +59,22 @@ async def handle_button(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes
 
     elif data == "join_game":
         logger.debug("join_game button pressed.")
-        context.user_data["action"] = "awaiting_name"
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="Please enter your name.")
+        # Check if the user exists
+        cursor.execute("SELECT username FROM Users WHERE user_id = ?", (user_id,))
+        result = cursor.fetchone()
+        if result:
+            username = result[0]
+            context.user_data["username"] = username
+            context.user_data["action"] = "existing_user"
+            keyboard = [
+                [InlineKeyboardButton("Keep Name", callback_data="keep_name")],
+                [InlineKeyboardButton("Change Name", callback_data="change_name")],
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Welcome back, {username}! Do you want to keep your name or change it?", reply_markup=reply_markup)
+        else:
+            context.user_data["action"] = "awaiting_name"
+            await context.bot.send_message(chat_id=update.effective_chat.id, text="Please enter your name.")
 
     elif data == "set_roles":
         logger.debug("set_roles button pressed.")
@@ -198,29 +212,38 @@ async def handle_button(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes
       if not game_id:
         await context.bot.send_message(chat_id=update.effective_chat.id, text="No game selected.")
         return
-      context.user_data['action'] = 'awaiting_template_name'
-      await context.bot.send_message(chat_id=update.effective_chat.id, text="Please enter the name for this template.")
+    
+      await get_roles_and_save_template(update, context)
+     
     elif data == "template_creation":
         # This is an example, you can use to call this as a start
-        await create_new_template(update,context)
+        await get_roles_and_save_template(update,context)
+    
+    elif data == "keep_name":
+        logger.debug("keep_name button pressed.")
+        context.user_data["action"] = "join_game"
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="Please enter the passcode to join the game.")
+
+    elif data == "change_name":
+        logger.debug("change_name button pressed.")
+        context.user_data["action"] = "awaiting_name"
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="Please enter your new name.")
 
     else:
         await context.bot.send_message(chat_id=update.effective_chat.id, text="Unknown action.")
 
-# Function to handle template creation
-async def create_new_template(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE) -> None:
-    logger.debug("Template creation initiated.")
-    if not context.user_data.get('game_id'):
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="No game selected.")
-        return
-    # Create a template name
-    player_count = get_player_count(context.user_data.get('game_id'))
-    template_name = f"Template {player_count} Players"
-    context.user_data["action"] = "create_template"
-    context.user_data["template_name"] = template_name
 
-    # Fetch role counts from DB
+# Refactor to get roles, player count and then save template
+async def get_roles_and_save_template(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE) -> None:
+    logger.debug("Getting roles and saving template.")
     game_id = context.user_data.get('game_id')
+    if not game_id:
+      await context.bot.send_message(chat_id=update.effective_chat.id, text="No game selected.")
+      return
+
+    player_count = get_player_count(game_id)
+    
+    # Fetch role counts from DB
     cursor.execute("SELECT role, count FROM GameRoles WHERE game_id = ?", (game_id,))
     roles_data = cursor.fetchall()
     
@@ -232,8 +255,11 @@ async def create_new_template(update: ContextTypes.DEFAULT_TYPE, context: Contex
          return
     
     context.user_data['roles_for_template'] = role_counts
-    
-    await context.bot.send_message(chat_id=update.effective_chat.id, text=f"The template name is: '{template_name}'. If you don't like it, please enter another name:")
+    context.user_data['player_count'] = player_count
+    context.user_data['action'] = 'awaiting_template_name'
+
+    await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Please enter the name for this template.")
+
 
 # Create the handler instance
 button_handler = CallbackQueryHandler(handle_button)
