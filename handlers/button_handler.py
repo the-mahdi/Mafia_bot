@@ -19,8 +19,8 @@ import asyncio
 
 logger = logging.getLogger("Mafia Bot ButtonHandler")
 
-# Initialize an asyncio lock for synchronization
-role_counts_lock = asyncio.Lock()
+# Initialize a dictionary to store locks for each game
+game_locks = {}
 
 async def handle_button(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE) -> None:
     logger.debug("Handling a button press.")
@@ -42,7 +42,11 @@ async def handle_button(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes
         if not game_id:
             await context.bot.send_message(chat_id=update.effective_chat.id, text="No game selected.")
             return
-        async with role_counts_lock:
+        game_lock = game_locks.get(game_id)
+        if not game_lock:
+            game_lock = asyncio.Lock()
+            game_locks[game_id] = game_lock
+        async with game_lock:
             cursor.execute("DELETE FROM GameRoles WHERE game_id = ?", (game_id,))
             # Initialize role counts to 0 for all roles
             for role in available_roles:
@@ -138,7 +142,11 @@ async def handle_button(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes
             await context.bot.send_message(chat_id=update.effective_chat.id, text="Selected template not found.")
             return
         # Set the roles based on the template
-        async with role_counts_lock:
+        game_lock = game_locks.get(game_id)
+        if not game_lock:
+            game_lock = asyncio.Lock()
+            game_locks[game_id] = game_lock
+        async with game_lock:
             for role, count in selected_template['roles'].items():
                 cursor.execute("""
                     INSERT INTO GameRoles (game_id, role, count)
@@ -160,7 +168,11 @@ async def handle_button(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes
         if not game_id:
            await context.bot.send_message(chat_id=update.effective_chat.id, text="No game selected.")
            return
-        async with role_counts_lock:
+        game_lock = game_locks.get(game_id)
+        if not game_lock:
+            game_lock = asyncio.Lock()
+            game_locks[game_id] = game_lock
+        async with game_lock:
             cursor.execute(
                 "INSERT INTO GameRoles (game_id, role, count) VALUES (?, ?, 0) ON CONFLICT(game_id, role) DO UPDATE SET count = count + 1",
                 (game_id, role)
@@ -177,7 +189,11 @@ async def handle_button(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes
         if not game_id:
             await context.bot.send_message(chat_id=update.effective_chat.id, text="No game selected.")
             return
-        async with role_counts_lock:
+        game_lock = game_locks.get(game_id)
+        if not game_lock:
+            game_lock = asyncio.Lock()
+            game_locks[game_id] = game_lock
+        async with game_lock:
             cursor.execute("SELECT count FROM GameRoles WHERE game_id = ? AND role = ?", (game_id, role))
             result = cursor.fetchone()
             current_count = result[0] if result else 0

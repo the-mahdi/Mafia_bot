@@ -22,17 +22,47 @@ def initialize_database():
         )
     ''')
 
-    # Create Games table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS Games (
-            game_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            passcode TEXT UNIQUE,
-            moderator_id INTEGER,
-            started INTEGER DEFAULT 0,
-            randomness_method TEXT DEFAULT 'fallback (local random)',
-            FOREIGN KEY (moderator_id) REFERENCES Users(user_id)
-        )
-    ''')
+    # Check if Games table exists
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='Games'")
+    games_table_exists = cursor.fetchone()
+
+    if games_table_exists:
+        # Create a new table with the correct schema
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS Games_new (
+                game_id TEXT PRIMARY KEY,
+                passcode TEXT UNIQUE,
+                moderator_id INTEGER,
+                started INTEGER DEFAULT 0,
+                randomness_method TEXT DEFAULT 'fallback (local random)',
+                FOREIGN KEY (moderator_id) REFERENCES Users(user_id)
+            )
+        ''')
+
+        # Copy data from the old table to the new table
+        cursor.execute("INSERT INTO Games_new (game_id, passcode, moderator_id, started, randomness_method) SELECT game_id, passcode, moderator_id, started, randomness_method FROM Games")
+
+        # Drop the old table
+        cursor.execute("DROP TABLE Games")
+
+        # Rename the new table to the old table name
+        cursor.execute("ALTER TABLE Games_new RENAME TO Games")
+
+        logger.debug("Games table migrated to use TEXT PRIMARY KEY for game_id.")
+    else:
+        # Create Games table with TEXT PRIMARY KEY if it doesn't exist
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS Games (
+                game_id TEXT PRIMARY KEY,
+                passcode TEXT UNIQUE,
+                moderator_id INTEGER,
+                started INTEGER DEFAULT 0,
+                randomness_method TEXT DEFAULT 'fallback (local random)',
+                FOREIGN KEY (moderator_id) REFERENCES Users(user_id)
+            )
+        ''')
+        logger.debug("Games table created with TEXT PRIMARY KEY for game_id.")
+
 
     # Create Roles table
     cursor.execute('''
