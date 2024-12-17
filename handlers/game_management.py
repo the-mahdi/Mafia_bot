@@ -196,11 +196,56 @@ async def confirm_and_set_roles(update: ContextTypes.DEFAULT_TYPE, context: Cont
         )
         conn.commit()
         logger.debug(f"Roles set for game ID {game_id} using {method_used}")
-        return True, method_used
     except Exception as e:
         conn.rollback()
         logger.error(f"Failed to set roles due to error: {e}")
         return False, method_used
+
+    # -------------------- Send the roles, their count, and descriptions to all players --------------------
+
+    # Fetch role counts excluding roles with count 0
+    cursor.execute("SELECT role, count FROM GameRoles WHERE game_id = ? AND count > 0", (game_id,))
+    role_counts = cursor.fetchall()
+
+    # Count total number of players
+    total_players = len(users)
+
+    # Prepare the summary message
+    summary_message = f"📊 **Game Summary** 📊\n\n" \
+                      f"**Total Players:** {total_players}\n\n" \
+                      f"**Roles in the Game:**\n"
+
+    for role, count in role_counts:
+        description = role_descriptions.get(role, "No description available.")
+        summary_message += f"- **{role}** ({count}): {description}\n"
+
+    # Send the summary message to all players
+    cursor.execute("""
+        SELECT Roles.user_id, Users.username
+        FROM Roles
+        JOIN Users ON Roles.user_id = Users.user_id
+        WHERE Roles.game_id = ?
+    """, (game_id,))
+    player_roles = cursor.fetchall()
+    for user_id, username in player_roles:
+        try:
+            await context.bot.send_message(
+                chat_id=user_id,
+                text=summary_message,
+                parse_mode='Markdown'
+            )
+        except Exception as e:
+            logger.error(f"Failed to send game summary to user {user_id}: {e}")
+            try:
+                await context.bot.send_message(
+                    chat_id=update.effective_user.id,
+                    text=f"Failed to send game summary to user {username} (ID: {user_id}). Please check their privacy settings."
+                )
+            except Exception as ex:
+                logger.error(f"Failed to notify moderator about summary message for user {user_id}: {ex}")
+
+    # --------------------- Send the roles, their count, and descriptions to all players ---------------------
+    return True, method_used
 
 async def create_game(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE) -> None:
     logger.debug("Creating a new game.")
@@ -368,44 +413,6 @@ async def start_game(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DE
         chat_id=moderator_id, 
         text=f"{role_message}"
     )
-
-    # -------------------- Send the roles, their count, and descriptions to all players --------------------
-
-    # Fetch role counts excluding roles with count 0
-    cursor.execute("SELECT role, count FROM GameRoles WHERE game_id = ? AND count > 0", (game_id,))
-    role_counts = cursor.fetchall()
-
-    # Count total number of players
-    total_players = len(player_roles)
-
-    # Prepare the summary message
-    summary_message = f"📊 **Game Summary** 📊\n\n" \
-                      f"**Total Players:** {total_players}\n\n" \
-                      f"**Roles in the Game:**\n"
-
-    for role, count in role_counts:
-        description = role_descriptions.get(role, "No description available.")
-        summary_message += f"- **{role}** ({count}): {description}\n"
-
-    # Send the summary message to all players
-    for user_id, role, username in player_roles:
-        try:
-            await context.bot.send_message(
-                chat_id=user_id,
-                text=summary_message,
-                parse_mode='Markdown'
-            )
-        except Exception as e:
-            logger.error(f"Failed to send game summary to user {user_id}: {e}")
-            try:
-                await context.bot.send_message(
-                    chat_id=moderator_id,
-                    text=f"Failed to send game summary to user {username} (ID: {user_id}). Please check their privacy settings."
-                )
-            except Exception as ex:
-                logger.error(f"Failed to notify moderator about summary message for user {user_id}: {ex}")
-
-    # --------------------- Send the roles, their count, and descriptions to all players ---------------------
 
     # Mark the game as started
     cursor.execute("UPDATE Games SET started = 1 WHERE game_id = ?", (game_id,))
