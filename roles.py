@@ -20,10 +20,22 @@ def read_role_descriptions():
     return descriptions
 
 def load_role_templates():
-    with open(resource_path('role_templates.json'), 'r') as file:
-        templates = json.load(file).get('templates', {})
-    logger.debug(f"Role templates loaded: {templates}")
-    return templates
+    try:
+        with open(resource_path('role_templates.json'), 'r') as file:
+            templates = json.load(file).get('templates', {})
+        logger.debug(f"Role templates loaded: {templates}")
+        return templates
+    except FileNotFoundError:
+        logger.warning("role_templates.json not found. Creating a new one.")
+        return {}
+    except json.JSONDecodeError:
+        logger.error("Invalid JSON format in role_templates.json. Starting with an empty template.")
+        return {}
+
+def save_role_templates(templates):
+    with open(resource_path('role_templates.json'), 'w') as file:
+        json.dump({'templates': templates}, file, indent=2)
+    logger.debug(f"Role templates saved: {templates}")
 
 available_roles = load_available_roles()
 role_descriptions = read_role_descriptions()
