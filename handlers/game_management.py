@@ -99,10 +99,11 @@ async def show_role_buttons(update: ContextTypes.DEFAULT_TYPE, context: ContextT
             InlineKeyboardButton(f"{role} ({role_counts[role]})", callback_data=f"role_{role}"),
             InlineKeyboardButton("+", callback_data=f"increase_{role}")
         ])
-    # Add Reset and Back buttons
+    # Add Reset, Confirm, and Save Template buttons
     keyboard.append([InlineKeyboardButton("Reset Roles", callback_data="reset_roles")])
     keyboard.append([
         InlineKeyboardButton("Confirm Roles", callback_data="confirm_roles"),
+        InlineKeyboardButton("Confirm Roles and Save as Template", callback_data="confirm_roles_and_save_template"),
         InlineKeyboardButton("Back to Menu", callback_data="back_to_menu")
     ])
     reply_markup = InlineKeyboardMarkup(keyboard)

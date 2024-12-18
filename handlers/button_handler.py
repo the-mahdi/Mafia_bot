@@ -224,10 +224,15 @@ async def handle_button(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes
                 text=f"Roles have been confirmed and set successfully!\nRandomness source: {method}."
             )
 
-    elif data == "confirm_and_add_template":
-        logger.debug("confirm_and_add_template button pressed.")
+    elif data == "confirm_roles_and_save_template":
+        logger.debug("confirm_roles_and_save_template button pressed.")
         if not game_id:
             await context.bot.send_message(chat_id=update.effective_chat.id, text="No game selected.")
+            return
+        # Confirm roles first
+        success, method = await confirm_and_set_roles(update, context, game_id)
+        if not success:
+            await context.bot.send_message(chat_id=update.effective_chat.id, text="Error setting roles. Please try again.")
             return
         # Initiate the template confirmation process
         context.user_data['action'] = 'awaiting_template_name_confirmation'

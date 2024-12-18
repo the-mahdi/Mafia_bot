@@ -62,10 +62,30 @@ async def handle_passcode(update: ContextTypes.DEFAULT_TYPE, context: ContextTyp
 
     elif action == "awaiting_template_name_confirmation":
         # Handle the input as template name and save as pending
-        await save_template_as_pending(update, context, user_input)
+        await handle_template_confirmation(update, context, user_input)
 
     else:
         await context.bot.send_message(chat_id=update.effective_chat.id, text="Unknown action. Please use /start to begin.")
+
+async def handle_template_confirmation(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE, template_name: str) -> None:
+    logger.debug("Handling template confirmation.")
+    game_id = context.user_data.get('game_id')
+
+    if not game_id:
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="No game selected.")
+        return
+
+    # Get roles from the database
+    cursor.execute("SELECT role, count FROM GameRoles WHERE game_id = ?", (game_id,))
+    roles = {role: count for role, count in cursor.fetchall()}
+    context.user_data['roles_for_template'] = roles
+
+    # Get player count
+    player_count = get_player_count(game_id)
+    context.user_data['player_count'] = player_count
+
+    await save_template_as_pending(update, context, template_name)
+
 
 async def save_template_as_pending(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE, template_name: str) -> None:
     logger.debug("Saving template as pending.")
