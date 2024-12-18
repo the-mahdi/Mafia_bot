@@ -44,7 +44,22 @@ def save_role_templates(templates, pending_templates):
 def load_role_descriptions():
     return read_role_descriptions()
 
+def load_role_factions():
+    factions = {}
+    try:
+        with open(resource_path('role_factions.txt'), 'r') as file:
+            for line in file:
+                if ':' in line:
+                    role, faction = line.strip().split(':', 1)
+                    factions[role.strip()] = faction.strip()
+        logger.debug(f"Role factions loaded: {factions}")
+    except FileNotFoundError:
+        logger.error("role_factions.txt not found.")
+        return {}
+    return factions
+
 # Initialize global variables
 available_roles = load_available_roles()
 role_descriptions = read_role_descriptions()
 role_templates, pending_templates = load_role_templates()
+role_factions = load_role_factions()
