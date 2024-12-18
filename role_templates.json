@@ -1,0 +1,19 @@
+{
+  "templates": {
+    "2": [
+      {
+        "name": "Test 2 shahr - 2",
+        "roles": {
+          "ShahrSaD": 2
+        }
+      },
+      {
+        "name": "Test efshagar hacker - 2",
+        "roles": {
+          "Efsha Gar": 1,
+          "Hacker": 1
+        }
+      }
+    ]
+  }
+}

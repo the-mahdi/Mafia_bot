@@ -1,31 +1,44 @@
 import logging
 from telegram.ext import Application
-from config import TOKEN
-from db import initialize_database
+from config import TOKEN  # Import config here
+from db import initialize_database  # Import db here
 from handlers.start_handler import start_handler
 from handlers.button_handler import button_handler
 from handlers.passcode_handler import passcode_handler
 
+
+class ApplicationFilter(logging.Filter):
+    def __init__(self, application_name):
+        super().__init__()
+        self.application_name = application_name
+
+    def filter(self, record):
+        # Allow logs from the application and the specified error handler
+        if record.name.startswith(self.application_name) or record.name == "Mafia Bot ErrorHandler":
+            return True
+
+        # Optionally, suppress logs from specific noisy libraries
+        if record.name.startswith("telegram") or record.name.startswith("httpx"):
+            return False
+
+        return False  # Default to filtering out other logs
+
 def setup_logging():
-    # Create a logger for your application
-    logger = logging.getLogger("Mafia Bot")
-    logger.setLevel(logging.DEBUG)
-
-    # Create handlers
-    console_handler = logging.StreamHandler()
-    file_handler = logging.FileHandler('mafia_bot.log')
-
-    # Create formatters and add them to handlers
-    formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    # Configure the root logger
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.StreamHandler(),
+            logging.FileHandler('mafia_bot.log')
+        ]
     )
-    console_handler.setFormatter(formatter)
-    file_handler.setFormatter(formatter)
 
-    # Add handlers to the logger
-    logger.addHandler(console_handler)
-    logger.addHandler(file_handler)
+    # Add the filter to the handlers of the root logger
+    for handler in logging.getLogger().handlers:
+        handler.addFilter(ApplicationFilter("Mafia Bot"))
 
+    logger = logging.getLogger("Mafia Bot")
     return logger
 
 async def error_handler(update, context):
