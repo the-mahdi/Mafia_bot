@@ -25,9 +25,9 @@ def load_role_templates():
             data = json.load(file)
             templates = data.get('templates', {})
             pending_templates = data.get('pending_templates', {})
-            logger.debug(f"Role templates loaded: {templates}")
-            logger.debug(f"Pending templates loaded: {pending_templates}")
-            return templates, pending_templates
+        logger.debug(f"Role templates loaded: {templates}")
+        logger.debug(f"Pending templates loaded: {pending_templates}")
+        return templates, pending_templates
     except FileNotFoundError:
         logger.warning("role_templates.json not found. Creating a new one.")
         return {}, {}
@@ -43,9 +43,6 @@ def save_role_templates(templates, pending_templates):
 
 def load_role_descriptions():
     return read_role_descriptions()
-
-def load_available_roles():
-    return load_available_roles()
 
 # Initialize global variables
 available_roles = load_available_roles()
