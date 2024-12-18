@@ -540,18 +540,20 @@ async def announce_voting(update: ContextTypes.DEFAULT_TYPE, context: ContextTyp
     game_voting_data[game_id] = {
         'votes': {},
         'voters': set(),
-        'player_ids': player_ids
+        'player_ids': player_ids,
+        'player_votes': {player[0]: '❌' for player in players}  # Initialize all votes to Nay
     }
 
     # Send voting message to each player
     for player_id, player_username in players:
         keyboard = []
         for target_id, target_username in players:
-            button_text = f"Vote for {target_username}"
-            callback_data = f"vote_{target_id}"  # Removed game_id from here
+            vote_status = game_voting_data[game_id]['player_votes'][target_id]
+            button_text = f"{target_username} ({vote_status})"
+            callback_data = f"vote_{target_id}"
             keyboard.append([InlineKeyboardButton(button_text, callback_data=callback_data)])
 
-        keyboard.append([InlineKeyboardButton("Confirm Votes", callback_data=f"confirm_votes")]) # Removed game_id
+        keyboard.append([InlineKeyboardButton("Confirm Votes", callback_data=f"confirm_votes")])
         reply_markup = InlineKeyboardMarkup(keyboard)
 
         try:
@@ -582,13 +584,34 @@ async def handle_vote(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.D
         await context.bot.send_message(chat_id=voter_id, text="You have already confirmed your votes.")
         return
 
-    # Add vote to temporary storage
-    if voter_id not in game_voting_data[game_id]['votes']:
-        game_voting_data[game_id]['votes'][voter_id] = []
-    if target_id not in game_voting_data[game_id]['votes'][voter_id]:
-        game_voting_data[game_id]['votes'][voter_id].append(target_id)
+    # Toggle vote status
+    if game_voting_data[game_id]['player_votes'][target_id] == '❌':
+        game_voting_data[game_id]['player_votes'][target_id] = '✅'
+    else:
+        game_voting_data[game_id]['player_votes'][target_id] = '❌'
 
-    await context.bot.send_message(chat_id=voter_id, text="Your vote has been recorded.")
+    # Update the button text
+    keyboard = []
+    players = []
+    cursor.execute("SELECT Roles.user_id, Users.username FROM Roles JOIN Users ON Roles.user_id = Users.user_id WHERE Roles.game_id = ?", (game_id,))
+    players = cursor.fetchall()
+    for target_id_loop, target_username in players:
+        vote_status = game_voting_data[game_id]['player_votes'][target_id_loop]
+        button_text = f"{target_username} ({vote_status})"
+        callback_data = f"vote_{target_id_loop}"
+        keyboard.append([InlineKeyboardButton(button_text, callback_data=callback_data)])
+
+    keyboard.append([InlineKeyboardButton("Confirm Votes", callback_data=f"confirm_votes")])
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    try:
+        await context.bot.edit_message_reply_markup(
+            chat_id=update.effective_chat.id,
+            message_id=update.callback_query.message.message_id,
+            reply_markup=reply_markup
+        )
+    except Exception as e:
+        logger.error(f"Failed to edit message: {e}")
 
 async def confirm_votes(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE, game_id: str) -> None:
     logger.debug("Confirming votes.")
@@ -606,6 +629,12 @@ async def confirm_votes(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes
         return
 
     game_voting_data[game_id]['voters'].remove(voter_id)
+
+    # Store the final votes
+    game_voting_data[game_id]['votes'][voter_id] = [
+        target_id for target_id, vote in game_voting_data[game_id]['player_votes'].items() if vote == '✅'
+    ]
+
     await context.bot.send_message(chat_id=voter_id, text="Your votes have been confirmed.")
 
     # Check if all players have voted
@@ -615,11 +644,18 @@ async def confirm_votes(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes
 async def process_voting_results(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE, game_id: str) -> None:
     logger.debug("Processing voting results.")
     if game_id not in game_voting_data:
+        logger.error(f"Game ID {game_id} not found in voting data.")
         return
 
     # Fetch player names
-    cursor.execute("SELECT Roles.user_id, Users.username FROM Roles JOIN Users ON Roles.user_id = Users.user_id WHERE Roles.game_id = ?", (game_id,))
-    player_names = {user_id: username for user_id, username in cursor.fetchall()}
+    cursor.execute("""
+        SELECT Roles.user_id, Users.username 
+        FROM Roles 
+        JOIN Users ON Roles.user_id = Users.user_id 
+        WHERE Roles.game_id = ?
+    """, (game_id,))
+    players = cursor.fetchall()
+    player_names = {user_id: username for user_id, username in players}
 
     # Count votes
     vote_counts = {}
@@ -630,19 +666,155 @@ async def process_voting_results(update: ContextTypes.DEFAULT_TYPE, context: Con
     # Sort results
     sorted_results = sorted(vote_counts.items(), key=lambda item: item[1], reverse=True)
 
-    # Send summary
-    summary_message = "Voting Results (Summary):\n"
-    for voted_id, count in sorted_results:
-        summary_message += f"{player_names.get(voted_id, 'Unknown')}: {count} votes\n"
-    await context.bot.send_message(chat_id=update.effective_chat.id, text=summary_message)
+    # Prepare the summary message
+    summary_message = "📊 **Voting Results (Summary):**\n\n"
+    if sorted_results:
+        for voted_id, count in sorted_results:
+            summary_message += f"• **{player_names.get(voted_id, 'Unknown')}**: {count} vote(s)\n"
+    else:
+        summary_message += "No votes were cast."
 
-    # Send detailed results
-    detailed_message = "Voting Results (Detailed):\n"
+    # Fetch moderator ID
+    cursor.execute("SELECT moderator_id FROM Games WHERE game_id = ?", (game_id,))
+    result = cursor.fetchone()
+    if not result:
+        logger.error(f"Game ID {game_id} not found when fetching moderator.")
+        return
+    moderator_id = result[0]
+
+    # Send the summary message to the current chat and the moderator
+    try:
+        await context.bot.send_message(chat_id=update.effective_chat.id, text=summary_message, parse_mode='Markdown')
+    except Exception as e:
+        logger.error(f"Failed to send summary message to chat: {e}")
+
+    try:
+        await context.bot.send_message(chat_id=moderator_id, text=summary_message, parse_mode='Markdown')
+    except Exception as e:
+        logger.error(f"Failed to send summary message to moderator {moderator_id}: {e}")
+
+    # Generate detailed voting report
+    detailed_report = "📝 **Detailed Voting Report:**\n\n"
     for voter_id, votes in game_voting_data[game_id]['votes'].items():
-        voter_name = player_names.get(voter_id, 'Unknown')
-        detailed_message += f"{voter_name} voted for: "
-        detailed_message += ", ".join([player_names.get(voted_id, 'Unknown') for voted_id in votes]) + "\n"
-    await context.bot.send_message(chat_id=update.effective_chat.id, text=detailed_message)
+        voter_name = player_names.get(voter_id, f"User {voter_id}")
+        if votes:
+            voted_names = [player_names.get(voted_id, f"User {voted_id}") for voted_id in votes]
+            voted_str = ", ".join(voted_names)
+            detailed_report += f"• **{voter_name}** voted for: {voted_str}\n"
+        else:
+            detailed_report += f"• **{voter_name}** did not vote.\n"
 
-    # Clean up
+    # Fetch all player IDs
+    player_ids = [user_id for user_id, _ in players]
+
+    # Send the detailed report to all players
+    for player_id in player_ids:
+        try:
+            await context.bot.send_message(chat_id=player_id, text=detailed_report, parse_mode='Markdown')
+        except Exception as e:
+            logger.error(f"Failed to send detailed voting report to user {player_id}: {e}")
+            # Optionally notify the moderator about the failure
+            try:
+                await context.bot.send_message(
+                    chat_id=moderator_id, 
+                    text=f"⚠️ Failed to send detailed voting report to user {player_id}."
+                )
+            except Exception as ex:
+                logger.error(f"Failed to notify moderator about failed message to user {player_id}: {ex}")
+
+    # Send the detailed report to the moderator
+    try:
+        await context.bot.send_message(chat_id=moderator_id, text=detailed_report, parse_mode='Markdown')
+    except Exception as e:
+        logger.error(f"Failed to send detailed voting report to moderator {moderator_id}: {e}")
+
+    # Clean up voting data for the game
     del game_voting_data[game_id]
+    logger.debug(f"Voting data for game ID {game_id} has been cleared.")
+
+
+async def eliminate_player(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE, game_id: str) -> None:
+    logger.debug("Initiating player elimination process.")
+    
+    # Fetch active (non-eliminated) players
+    cursor.execute("""
+        SELECT Roles.user_id, Users.username
+        FROM Roles
+        JOIN Users ON Roles.user_id = Users.user_id
+        WHERE Roles.game_id = ? AND Roles.eliminated = 0
+    """, (game_id,))
+    players = cursor.fetchall()
+    
+    if not players:
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="No active players to eliminate.")
+        return
+    
+    # Create elimination buttons for each player
+    keyboard = []
+    for user_id, username in players:
+        keyboard.append([InlineKeyboardButton(username, callback_data=f"eliminate_confirm_{user_id}")])
+    
+    # Add a back button
+    keyboard.append([InlineKeyboardButton("Back to Manage Games", callback_data="manage_games")])
+    
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await context.bot.send_message(chat_id=update.effective_chat.id, text="Select a player to eliminate:", reply_markup=reply_markup)
+
+async def handle_elimination_confirmation(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE, game_id: str, target_user_id: int) -> None:
+    logger.debug(f"Handling elimination confirmation for user ID {target_user_id} in game ID {game_id}.")
+    
+    # Fetch the username of the target user
+    cursor.execute("SELECT username FROM Users WHERE user_id = ?", (target_user_id,))
+    result = cursor.fetchone()
+    if not result:
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="User not found.")
+        return
+    username = result[0]
+    
+    # Ask for confirmation
+    keyboard = [
+        [InlineKeyboardButton("Yes, Eliminate", callback_data=f"eliminate_yes_{target_user_id}")],
+        [InlineKeyboardButton("Cancel", callback_data=f"eliminate_cancel_{target_user_id}")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Are you sure you want to eliminate {username}?", reply_markup=reply_markup)
+
+async def confirm_elimination(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE, game_id: str, target_user_id: int) -> None:
+    logger.debug(f"Confirming elimination for user ID {target_user_id} in game ID {game_id}.")
+    
+    # Mark the player as eliminated in the database
+    cursor.execute("""
+        UPDATE Roles
+        SET eliminated = 1
+        WHERE game_id = ? AND user_id = ?
+    """, (game_id, target_user_id))
+    conn.commit()
+    
+    # Fetch the username of the eliminated player
+    cursor.execute("SELECT username FROM Users WHERE user_id = ?", (target_user_id,))
+    result = cursor.fetchone()
+    username = result[0] if result else "Unknown"
+    
+    # Notify the moderator
+    await context.bot.send_message(chat_id=update.effective_chat.id, text=f"{username} has been eliminated from the game.")
+    
+    # Notify the eliminated player
+    try:
+        await context.bot.send_message(
+            chat_id=target_user_id,
+            text="You have been eliminated from the game. Better luck next time!"
+        )
+    except Exception as e:
+        logger.error(f"Failed to notify user {target_user_id} about elimination: {e}")
+        await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Failed to notify {username} about their elimination.")
+
+async def cancel_elimination(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE, game_id: str, target_user_id: int) -> None:
+    logger.debug(f"Elimination of user ID {target_user_id} in game ID {game_id} has been canceled.")
+    
+    # Fetch the username of the target user
+    cursor.execute("SELECT username FROM Users WHERE user_id = ?", (target_user_id,))
+    result = cursor.fetchone()
+    username = result[0] if result else "Unknown"
+    
+    # Notify the moderator
+    await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Elimination of {username} has been canceled.")

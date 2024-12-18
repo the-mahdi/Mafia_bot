@@ -17,6 +17,10 @@ from handlers.game_management import (
     announce_voting,
     handle_vote,
     confirm_votes,
+    eliminate_player,
+    handle_elimination_confirmation,
+    confirm_elimination,
+    cancel_elimination,
 )
 from handlers.start_handler import start
 from config import MAINTAINER_ID
@@ -41,7 +45,7 @@ async def handle_button(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes
 
     if data == "back_to_menu":
         logger.debug("back_to_menu button pressed.")
-        await start(update, context)  # Ensure 'start' is imported or accessible
+        await start(update, context)
 
     elif data == "prev_page":
         logger.debug("Previous page button pressed.")
@@ -69,7 +73,8 @@ async def handle_button(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes
             # Initialize role counts to 0 for all roles
             for role in available_roles:
                 cursor.execute(
-                    "INSERT INTO GameRoles (game_id, role, count) VALUES (?, ?, 0) ON CONFLICT(game_id, role) DO UPDATE SET count=0",
+                    "INSERT INTO GameRoles (game_id, role, count) VALUES (?, ?, 0) "
+                    "ON CONFLICT(game_id, role) DO UPDATE SET count=0",
                     (game_id, role)
                 )
             conn.commit()
@@ -94,7 +99,11 @@ async def handle_button(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes
                 [InlineKeyboardButton("Change Name", callback_data="change_name")],
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
-            await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Welcome back, {username}! Do you want to keep your name or change it?", reply_markup=reply_markup)
+            await context.bot.send_message(
+                chat_id=update.effective_chat.id,
+                text=f"Welcome back, {username}! Do you want to keep your name or change it?",
+                reply_markup=reply_markup
+            )
         else:
             context.user_data["action"] = "awaiting_name"
             await context.bot.send_message(chat_id=update.effective_chat.id, text="Please enter your name.")
@@ -118,13 +127,34 @@ async def handle_button(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes
         logger.debug("manage_games button pressed.")
         await show_manage_games_menu(update, context)
 
+    elif data == "eliminate_player":
+        logger.debug("eliminate_player button pressed.")
+        if not game_id:
+            await context.bot.send_message(chat_id=update.effective_chat.id, text="No game selected.")
+            return
+        # Check if the user is the moderator
+        cursor.execute("SELECT moderator_id FROM Games WHERE game_id = ?", (game_id,))
+        result = cursor.fetchone()
+        if not result or result[0] != user_id:
+            await context.bot.send_message(chat_id=update.effective_chat.id, text="You are not authorized to eliminate players.")
+            return
+        await eliminate_player(update, context, game_id)  # Call the elimination initiation function
+
     elif data in ["start_game_manage_games", "announce_voting", "announce_anonymous_voting",
-                  "send_mafia_message", "send_villagers_message", "send_independents_message"]:
+                 "send_mafia_message", "send_villagers_message", "send_independents_message"]:
         # Handle buttons in the "Manage Games" menu
         if data == "start_game_manage_games":
             await start_latest_game(update, context)
         elif data == "announce_voting":
             await announce_voting(update, context)
+        elif data == "announce_anonymous_voting":
+            await context.bot.send_message(chat_id=update.effective_chat.id, text="Announce Anonymous Voting functionality is not implemented yet.")
+        elif data == "send_mafia_message":
+            await context.bot.send_message(chat_id=update.effective_chat.id, text="Send message to Mafia functionality is not implemented yet.")
+        elif data == "send_villagers_message":
+            await context.bot.send_message(chat_id=update.effective_chat.id, text="Send message to Villagers functionality is not implemented yet.")
+        elif data == "send_independents_message":
+            await context.bot.send_message(chat_id=update.effective_chat.id, text="Send message to Independents functionality is not implemented yet.")
         else:
             await context.bot.send_message(chat_id=update.effective_chat.id, text="The functionality has not been implemented yet.")
 
@@ -192,9 +222,9 @@ async def handle_button(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes
                 DO UPDATE SET count=excluded.count
                 """, (game_id, role, count))
             conn.commit()
-            await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Template '{template_name}' has been applied.")
-            # Refresh the role buttons to reflect the new counts
-            await show_role_buttons(update, context, message_id)
+        await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Template '{template_name}' has been applied.")
+        # Refresh the role buttons to reflect the new counts
+        await show_role_buttons(update, context, message_id)
 
     elif data.startswith("increase_"):
         role = data.split("_", 1)[1]
@@ -211,11 +241,12 @@ async def handle_button(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes
             game_locks[game_id] = game_lock
         async with game_lock:
             cursor.execute(
-                "INSERT INTO GameRoles (game_id, role, count) VALUES (?, ?, 0) ON CONFLICT(game_id, role) DO UPDATE SET count = count + 1",
+                "INSERT INTO GameRoles (game_id, role, count) VALUES (?, ?, 0) "
+                "ON CONFLICT(game_id, role) DO UPDATE SET count = count + 1",
                 (game_id, role)
             )
             conn.commit()
-            await show_role_buttons(update, context, message_id)
+        await show_role_buttons(update, context, message_id)
 
     elif data.startswith("decrease_"):
         role = data.split("_", 1)[1]
@@ -243,7 +274,7 @@ async def handle_button(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes
             else:
                 logger.debug(f"Role count for {role} is already 0. Cannot decrease further.")
             conn.commit()
-            await show_role_buttons(update, context, message_id)
+        await show_role_buttons(update, context, message_id)
 
     elif data == "confirm_roles":
         logger.debug("confirm_roles button pressed.")
@@ -275,11 +306,11 @@ async def handle_button(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes
 
     elif data.startswith("maintainer_confirm_"):
         template_name_with_count = data[len("maintainer_confirm_"):]
-        await handle_maintainer_confirmation(update, context, template_name_with_count, confirm=True)
+        await handle_elimination_confirmation(update, context, template_name_with_count, confirm=True)
 
     elif data.startswith("maintainer_reject_"):
         template_name_with_count = data[len("maintainer_reject_"):]
-        await handle_maintainer_confirmation(update, context, template_name_with_count, confirm=False)
+        await handle_elimination_confirmation(update, context, template_name_with_count, confirm=False)
 
     elif data == "keep_name":
         logger.debug("keep_name button pressed.")
@@ -291,8 +322,26 @@ async def handle_button(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes
         context.user_data["action"] = "awaiting_name"
         await context.bot.send_message(chat_id=update.effective_chat.id, text="Please enter your new name.")
 
+    # ---------------------- Elimination Handling ----------------------
+    elif data.startswith("eliminate_confirm_"):
+        # Extract target_user_id from callback_data
+        target_user_id = int(data.split("_")[2])
+        await handle_elimination_confirmation(update, context, game_id, target_user_id)
+
+    elif data.startswith("eliminate_yes_"):
+        # Extract target_user_id from callback_data
+        target_user_id = int(data.split("_")[2])
+        await confirm_elimination(update, context, game_id, target_user_id)
+
+    elif data.startswith("eliminate_cancel_"):
+        # Extract target_user_id from callback_data
+        target_user_id = int(data.split("_")[2])
+        await cancel_elimination(update, context, game_id, target_user_id)
+    # -------------------------------------------------------------------
+
     else:
         await context.bot.send_message(chat_id=update.effective_chat.id, text="Unknown action.")
+
 
 async def show_manage_games_menu(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE):
     logger.debug("Showing Manage Games menu.")
@@ -303,10 +352,12 @@ async def show_manage_games_menu(update: ContextTypes.DEFAULT_TYPE, context: Con
         [InlineKeyboardButton("Send message to Mafia", callback_data="send_mafia_message")],
         [InlineKeyboardButton("Send message to Villagers", callback_data="send_villagers_message")],
         [InlineKeyboardButton("Send message to Independents", callback_data="send_independents_message")],
+        [InlineKeyboardButton("Eliminate Player", callback_data="eliminate_player")],  # New Eliminate Player button
         [InlineKeyboardButton("Back to Menu", callback_data="back_to_menu")],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await context.bot.send_message(chat_id=update.effective_chat.id, text="Manage Games:", reply_markup=reply_markup)
+
 
 async def handle_maintainer_confirmation(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE, template_name_with_count: str, confirm: bool) -> None:
     user_id = update.effective_user.id
