@@ -574,3 +574,31 @@
 2024-12-18 05:46:07,863 - Mafia Bot GameManagement - DEBUG - Starting the game.
 2024-12-18 05:46:07,864 - Mafia Bot GameManagement - DEBUG - Player roles: [(58032530, 'Ghazi', 'Hasti'), (109130221, 'Gor Kan', 'Mahdi')]
 2024-12-18 05:46:08,093 - Mafia Bot GameManagement - DEBUG - Game 4df60e42-a73d-4777-a572-fd4a48ffe424 started using Random.org
+2024-12-18 06:12:21,077 - Mafia Bot - INFO - Initializing the Mafia Bot...
+2024-12-18 06:12:21,078 - Mafia Bot DB - DEBUG - Initializing the database and creating tables if they don't exist.
+2024-12-18 06:12:21,085 - Mafia Bot DB - DEBUG - Games table migrated to use TEXT PRIMARY KEY for game_id.
+2024-12-18 06:12:21,087 - Mafia Bot DB - DEBUG - Database initialized successfully.
+2024-12-18 06:12:21,613 - Mafia Bot - INFO - Starting the bot...
+2024-12-18 06:12:23,788 - Mafia Bot StartHandler - DEBUG - Handling /start command.
+2024-12-18 06:12:24,787 - Mafia Bot ButtonHandler - DEBUG - Handling a button press.
+2024-12-18 06:12:24,914 - Mafia Bot ButtonHandler - DEBUG - create_game button pressed.
+2024-12-18 06:12:24,914 - Mafia Bot GameManagement - DEBUG - Creating a new game.
+2024-12-18 06:12:24,915 - Mafia Bot GameManagement - DEBUG - Generated passcode: 69fc5466-8b4b-422c-824a-c9f9a9038869
+2024-12-18 06:12:24,915 - Mafia Bot GameManagement - DEBUG - Generated game_id: 3a5daf09-0905-45f5-a385-ef991c980c26
+2024-12-18 06:12:24,920 - Mafia Bot GameManagement - DEBUG - Game created with game_id: 3a5daf09-0905-45f5-a385-ef991c980c26, passcode: 69fc5466-8b4b-422c-824a-c9f9a9038869, moderator_id: 109130221
+2024-12-18 06:12:27,426 - Mafia Bot ButtonHandler - DEBUG - Handling a button press.
+2024-12-18 06:12:27,457 - Mafia Bot ButtonHandler - DEBUG - join_game button pressed.
+2024-12-18 06:12:28,477 - Mafia Bot ButtonHandler - DEBUG - Handling a button press.
+2024-12-18 06:12:28,512 - Mafia Bot ButtonHandler - DEBUG - keep_name button pressed.
+2024-12-18 06:12:30,427 - Mafia Bot PasscodeHandler - DEBUG - Handling a text message.
+2024-12-18 06:12:30,428 - Mafia Bot GameManagement - DEBUG - User attempting to join a game.
+2024-12-18 06:12:30,479 - Mafia Bot GameManagement - DEBUG - User Mahdi (ID: 109130221) joined game 3a5daf09-0905-45f5-a385-ef991c980c26
+2024-12-18 06:12:31,870 - Mafia Bot ButtonHandler - DEBUG - Handling a button press.
+2024-12-18 06:12:31,922 - Mafia Bot ButtonHandler - DEBUG - set_roles button pressed.
+2024-12-18 06:12:31,923 - Mafia Bot GameManagement - DEBUG - Displaying role buttons.
+2024-12-18 06:12:32,871 - Mafia Bot ButtonHandler - DEBUG - Handling a button press.
+2024-12-18 06:12:32,899 - Mafia Bot ButtonHandler - DEBUG - Increase button pressed for role: Mashoghe
+2024-12-18 06:12:32,902 - Mafia Bot GameManagement - DEBUG - Displaying role buttons.
+2024-12-18 06:12:34,803 - Mafia Bot ButtonHandler - DEBUG - Handling a button press.
+2024-12-18 06:12:34,851 - Mafia Bot ButtonHandler - DEBUG - back_to_menu button pressed.
+2024-12-18 06:12:34,851 - Mafia Bot StartHandler - DEBUG - Handling /start command.

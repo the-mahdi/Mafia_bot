@@ -8,7 +8,7 @@ import asyncio
 import random
 import aiohttp
 from db import conn, cursor
-from roles import available_roles, role_descriptions, role_templates
+from roles import available_roles, role_descriptions, role_templates, role_factions
 from utils import resource_path
 from config import RANDOM_ORG_API_KEY
 import json
@@ -400,10 +400,11 @@ async def start_game(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DE
     for user_id, role, username in player_roles:
         if role:
             role_description = role_descriptions.get(role, "No description available.")
+            role_faction = role_factions.get(role, "Unknown Faction") 
             try:
                 await context.bot.send_message(
                     chat_id=user_id,
-                    text=f"Hi {username}, your role is: {role}\n\nRole Description:\n{role_description}\n\n{methodology_description}"
+                    text=f"Hi {username}, your role is: {role} ({role_faction})\n\nRole Description:\n{role_description}\n\n{methodology_description}"
                 )
                 role_message += f"{username} (ID: {user_id}): {role}\n"
             except Exception as e:
