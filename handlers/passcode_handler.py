@@ -6,6 +6,8 @@ from db import conn, cursor
 from config import MAINTAINER_ID
 import json
 
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+
 logger = logging.getLogger("Mafia Bot PasscodeHandler")
 
 async def handle_passcode(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE) -> None:
