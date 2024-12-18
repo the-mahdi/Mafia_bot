@@ -24,3 +24,4 @@ Natasha: Natasha can silence one player each night, preventing them from talking
 Terrorist: If the Terrorist dies during the day by a gun or vote, they can take someone with them out of the game.
 Mozakere: The "Mozakere Konande," or Negotiator, can negotiate with some town citizens to become Mafia Sade. The negotiation can only be performed on Shahr Sade (simple citizens) or other roles announced by the coordinator.
 ShahKosh: The "Shah Kosh," or King Slayer, can guess the role of a citizen during the night. If guessed correctly, that player will be removed from the game.
+Zodiac: An independent serial killer immune to night attacks, killing on even nights, but vulnerable to day actions and bombs.
