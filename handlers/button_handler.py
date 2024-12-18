@@ -14,6 +14,9 @@ from handlers.game_management import (
     set_roles,
     start_game,
     start_latest_game,  # New function to be implemented
+    announce_voting,
+    handle_vote,
+    confirm_votes,
 )
 from handlers.start_handler import start
 from config import MAINTAINER_ID
@@ -120,8 +123,27 @@ async def handle_button(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes
         # Handle buttons in the "Manage Games" menu
         if data == "start_game_manage_games":
             await start_latest_game(update, context)
+        elif data == "announce_voting":
+            await announce_voting(update, context)
         else:
             await context.bot.send_message(chat_id=update.effective_chat.id, text="The functionality has not been implemented yet.")
+
+    elif data.startswith("vote_"):
+        target_id = int(data.split("_")[1])
+        # Retrieve game_id from user_data
+        game_id = context.user_data.get('game_id')
+        if game_id:
+            await handle_vote(update, context, game_id, target_id)
+        else:
+            await context.bot.send_message(chat_id=update.effective_chat.id, text="Game ID not found.")
+
+    elif data == "confirm_votes":
+        # Retrieve game_id from user_data
+        game_id = context.user_data.get('game_id')
+        if game_id:
+            await confirm_votes(update, context, game_id)
+        else:
+            await context.bot.send_message(chat_id=update.effective_chat.id, text="Game ID not found.")
 
     elif data == "select_template":
         logger.debug("select_template button pressed.")
@@ -272,9 +294,6 @@ async def handle_button(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes
     else:
         await context.bot.send_message(chat_id=update.effective_chat.id, text="Unknown action.")
 
-    # Refactor to get roles, player count and then save template
-    # Removed get_roles_and_save_template since it's replaced by the new flow
-
 async def show_manage_games_menu(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE):
     logger.debug("Showing Manage Games menu.")
     keyboard = [
@@ -326,9 +345,6 @@ async def handle_maintainer_confirmation(update: ContextTypes.DEFAULT_TYPE, cont
 
     # Save the updated templates
     save_role_templates(role_templates, pending_templates)
-
-    # TODO, notify the user who created the template
-    # This requires tracking which user created which template, which isn't implemented here
 
 # Create the handler instance
 button_handler = CallbackQueryHandler(handle_button)

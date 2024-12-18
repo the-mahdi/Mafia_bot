@@ -299,6 +299,7 @@ async def create_game(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.D
             conn.commit()
             logger.debug(f"Game created with game_id: {game_id}, passcode: {passcode}, moderator_id: {user_id}")
             context.user_data['game_id'] = game_id  # Store game_id in user_data
+            logger.debug(f"Game created. game_id stored in user_data: {game_id}")
 
             message = f"Game created successfully!\nPasscode: {passcode}\nShare this passcode with players to join."
             await context.bot.send_message(chat_id=update.effective_chat.id, text=message)
@@ -323,6 +324,7 @@ async def join_game(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEF
     if result:
         game_id, moderator_id = result
         context.user_data['game_id'] = game_id  # Store game_id in user_data
+        logger.debug(f"User joined game. game_id stored in user_data: {game_id}")
 
         # Update or insert user information
         cursor.execute("""
@@ -354,16 +356,23 @@ async def join_game(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEF
         message = "Invalid passcode. Please try again."
         await context.bot.send_message(chat_id=update.effective_chat.id, text=message)
 
-async def start_game(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE, passcode: str) -> None:
+async def start_game(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE) -> None:
     logger.debug("Starting the game.")
     user_id = update.effective_user.id
 
-    cursor.execute("SELECT game_id, moderator_id, started, randomness_method FROM Games WHERE passcode = ?", (passcode,))
+    # Retrieve game_id from context.user_data
+    game_id = context.user_data.get('game_id')
+
+    if not game_id:
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="Game not found.")
+        return
+
+    cursor.execute("SELECT moderator_id, started, randomness_method FROM Games WHERE game_id = ?", (game_id,))
     result = cursor.fetchone()
     if not result:
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="Game not found with the provided passcode.")
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="Game not found.")
         return
-    game_id, moderator_id, started, randomness_method = result
+    moderator_id, started, randomness_method = result
 
     if user_id != moderator_id:
         await context.bot.send_message(chat_id=update.effective_chat.id, text="You are not authorized to start this game.")
@@ -388,10 +397,6 @@ async def start_game(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DE
             text="Cannot start the game. Roles have not been assigned to all players."
         )
         return
-
-    # Fetch moderator ID
-    cursor.execute("SELECT moderator_id FROM Games WHERE game_id = ?", (game_id,))
-    moderator_id = cursor.fetchone()[0]
 
     role_message = "Game started! Here are the assigned roles:\n"
 
@@ -473,10 +478,10 @@ async def start_latest_game(update: ContextTypes.DEFAULT_TYPE, context: ContextT
 
     # Retrieve the latest game created by the moderator that hasn't been started yet
     cursor.execute("""
-        SELECT game_id, started, randomness_method 
-        FROM Games 
-        WHERE moderator_id = ? 
-        ORDER BY rowid DESC 
+        SELECT game_id, started, randomness_method
+        FROM Games
+        WHERE moderator_id = ?
+        ORDER BY rowid DESC
         LIMIT 1
     """, (user_id,))
     result = cursor.fetchone()
@@ -491,12 +496,153 @@ async def start_latest_game(update: ContextTypes.DEFAULT_TYPE, context: ContextT
         await context.bot.send_message(chat_id=update.effective_chat.id, text="The latest game you created has already started.")
         return
 
+    # Store game_id in context.user_data
+    context.user_data['game_id'] = game_id
+
     # Proceed to start the game without requiring a passcode
     success, method = await confirm_and_set_roles(update, context, game_id)
     if not success:
         await context.bot.send_message(chat_id=update.effective_chat.id, text="Error setting roles. Please try again.")
     else:
+        await start_game(update, context)  # Call start_game without passcode
         await context.bot.send_message(
             chat_id=update.effective_chat.id,
             text=f"The game has started successfully!\nRandomness source: {method}."
         )
+
+
+# Initialize a dictionary to store voting data for each game
+game_voting_data = {}
+
+async def announce_voting(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE) -> None:
+    logger.debug("Announcing voting.")
+    user_id = update.effective_user.id
+    game_id = context.user_data.get('game_id')
+    logger.debug(f"Announcing voting for game_id: {game_id}")
+
+    if not game_id:
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="No game selected.")
+        return
+
+    # Check if the user is the moderator
+    cursor.execute("SELECT moderator_id FROM Games WHERE game_id = ?", (game_id,))
+    result = cursor.fetchone()
+    if not result or result[0] != user_id:
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="You are not authorized to announce voting.")
+        return
+
+    # Get all players in the game
+    cursor.execute("SELECT Roles.user_id, Users.username FROM Roles JOIN Users ON Roles.user_id = Users.user_id WHERE Roles.game_id = ?", (game_id,))
+    players = cursor.fetchall()
+    player_ids = [player[0] for player in players]
+
+    # Initialize voting data
+    game_voting_data[game_id] = {
+        'votes': {},
+        'voters': set(),
+        'player_ids': player_ids
+    }
+
+    # Send voting message to each player
+    for player_id, player_username in players:
+        keyboard = []
+        for target_id, target_username in players:
+            button_text = f"Vote for {target_username}"
+            callback_data = f"vote_{target_id}"  # Removed game_id from here
+            keyboard.append([InlineKeyboardButton(button_text, callback_data=callback_data)])
+
+        keyboard.append([InlineKeyboardButton("Confirm Votes", callback_data=f"confirm_votes")]) # Removed game_id
+        reply_markup = InlineKeyboardMarkup(keyboard)
+
+        try:
+            # Store game_id in user_data for later retrieval
+            context.user_data['game_id'] = game_id
+            await context.bot.send_message(
+                chat_id=player_id,
+                text=f"Vote for player elimination:",
+                reply_markup=reply_markup
+            )
+            game_voting_data[game_id]['voters'].add(player_id)
+        except Exception as e:
+            logger.error(f"Failed to send voting message to user {player_id}: {e}")
+
+
+async def handle_vote(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE, game_id: str, target_id: int) -> None:
+    logger.debug("Handling vote.")
+    voter_id = update.effective_user.id
+
+    # Store game_id in context.bot_data for later retrieval
+    context.bot_data['game_id'] = game_id
+
+    if game_id not in game_voting_data:
+        await context.bot.send_message(chat_id=voter_id, text="Voting session not found.")
+        return
+
+    if voter_id not in game_voting_data[game_id]['voters']:
+        await context.bot.send_message(chat_id=voter_id, text="You have already confirmed your votes.")
+        return
+
+    # Add vote to temporary storage
+    if voter_id not in game_voting_data[game_id]['votes']:
+        game_voting_data[game_id]['votes'][voter_id] = []
+    if target_id not in game_voting_data[game_id]['votes'][voter_id]:
+        game_voting_data[game_id]['votes'][voter_id].append(target_id)
+
+    await context.bot.send_message(chat_id=voter_id, text="Your vote has been recorded.")
+
+async def confirm_votes(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE, game_id: str) -> None:
+    logger.debug("Confirming votes.")
+    voter_id = update.effective_user.id
+
+    # Retrieve game_id from context.bot_data
+    game_id = context.bot_data.get('game_id')
+
+    if not game_id or game_id not in game_voting_data:
+        await context.bot.send_message(chat_id=voter_id, text="Voting session not found.")
+        return
+
+    if voter_id not in game_voting_data[game_id]['voters']:
+        await context.bot.send_message(chat_id=voter_id, text="You have already confirmed your votes.")
+        return
+
+    game_voting_data[game_id]['voters'].remove(voter_id)
+    await context.bot.send_message(chat_id=voter_id, text="Your votes have been confirmed.")
+
+    # Check if all players have voted
+    if not game_voting_data[game_id]['voters']:
+        await process_voting_results(update, context, game_id)
+
+async def process_voting_results(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE, game_id: str) -> None:
+    logger.debug("Processing voting results.")
+    if game_id not in game_voting_data:
+        return
+
+    # Fetch player names
+    cursor.execute("SELECT Roles.user_id, Users.username FROM Roles JOIN Users ON Roles.user_id = Users.user_id WHERE Roles.game_id = ?", (game_id,))
+    player_names = {user_id: username for user_id, username in cursor.fetchall()}
+
+    # Count votes
+    vote_counts = {}
+    for voter_id, votes in game_voting_data[game_id]['votes'].items():
+        for voted_id in votes:
+            vote_counts[voted_id] = vote_counts.get(voted_id, 0) + 1
+
+    # Sort results
+    sorted_results = sorted(vote_counts.items(), key=lambda item: item[1], reverse=True)
+
+    # Send summary
+    summary_message = "Voting Results (Summary):\n"
+    for voted_id, count in sorted_results:
+        summary_message += f"{player_names.get(voted_id, 'Unknown')}: {count} votes\n"
+    await context.bot.send_message(chat_id=update.effective_chat.id, text=summary_message)
+
+    # Send detailed results
+    detailed_message = "Voting Results (Detailed):\n"
+    for voter_id, votes in game_voting_data[game_id]['votes'].items():
+        voter_name = player_names.get(voter_id, 'Unknown')
+        detailed_message += f"{voter_name} voted for: "
+        detailed_message += ", ".join([player_names.get(voted_id, 'Unknown') for voted_id in votes]) + "\n"
+    await context.bot.send_message(chat_id=update.effective_chat.id, text=detailed_message)
+
+    # Clean up
+    del game_voting_data[game_id]
