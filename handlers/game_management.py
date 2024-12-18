@@ -531,15 +531,20 @@ async def announce_voting(update: ContextTypes.DEFAULT_TYPE, context: ContextTyp
         await context.bot.send_message(chat_id=update.effective_chat.id, text="You are not authorized to announce voting.")
         return
 
-    # Get all players in the game
-    cursor.execute("SELECT Roles.user_id, Users.username FROM Roles JOIN Users ON Roles.user_id = Users.user_id WHERE Roles.game_id = ?", (game_id,))
+    # Fetch active (non-eliminated) players in the game
+    cursor.execute("""
+        SELECT Roles.user_id, Users.username 
+        FROM Roles 
+        JOIN Users ON Roles.user_id = Users.user_id 
+        WHERE Roles.game_id = ? AND Roles.eliminated = 0
+    """, (game_id,))
     players = cursor.fetchall()
     player_ids = [player[0] for player in players]
 
     # Initialize voting data
     game_voting_data[game_id] = {
         'votes': {},
-        'voters': set(),
+        'voters': set(player_ids),  # Initialize voters as the set of active player IDs
         'player_ids': player_ids,
         'player_votes': {player[0]: '❌' for player in players}  # Initialize all votes to Nay
     }
@@ -593,7 +598,12 @@ async def handle_vote(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.D
     # Update the button text
     keyboard = []
     players = []
-    cursor.execute("SELECT Roles.user_id, Users.username FROM Roles JOIN Users ON Roles.user_id = Users.user_id WHERE Roles.game_id = ?", (game_id,))
+    cursor.execute("""
+            SELECT Roles.user_id, Users.username 
+            FROM Roles 
+            JOIN Users ON Roles.user_id = Users.user_id 
+            WHERE Roles.game_id = ? AND Roles.eliminated = 0
+        """, (game_id,))
     players = cursor.fetchall()
     for target_id_loop, target_username in players:
         vote_status = game_voting_data[game_id]['player_votes'][target_id_loop]
@@ -647,12 +657,12 @@ async def process_voting_results(update: ContextTypes.DEFAULT_TYPE, context: Con
         logger.error(f"Game ID {game_id} not found in voting data.")
         return
 
-    # Fetch player names
+    # Fetch active (non-eliminated) player names
     cursor.execute("""
-        SELECT Roles.user_id, Users.username 
-        FROM Roles 
-        JOIN Users ON Roles.user_id = Users.user_id 
-        WHERE Roles.game_id = ?
+        SELECT Roles.user_id, Users.username
+        FROM Roles
+        JOIN Users ON Roles.user_id = Users.user_id
+        WHERE Roles.game_id = ? AND Roles.eliminated = 0
     """, (game_id,))
     players = cursor.fetchall()
     player_names = {user_id: username for user_id, username in players}
@@ -807,6 +817,16 @@ async def confirm_elimination(update: ContextTypes.DEFAULT_TYPE, context: Contex
     except Exception as e:
         logger.error(f"Failed to notify user {target_user_id} about elimination: {e}")
         await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Failed to notify {username} about their elimination.")
+
+    # Remove the eliminated player from any ongoing voting session
+    if game_id in game_voting_data:
+        if target_user_id in game_voting_data[game_id]['voters']:
+            game_voting_data[game_id]['voters'].remove(target_user_id)
+        if target_user_id in game_voting_data[game_id]['player_votes']:
+            del game_voting_data[game_id]['player_votes'][target_user_id]
+        # Optionally, re-check if all voters have voted after removal
+        if not game_voting_data[game_id]['voters']:
+            await process_voting_results(update, context, game_id)
 
 async def cancel_elimination(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE, game_id: str, target_user_id: int) -> None:
     logger.debug(f"Elimination of user ID {target_user_id} in game ID {game_id} has been canceled.")
