@@ -1,8 +1,10 @@
 from telegram.ext import MessageHandler, filters, ContextTypes
 import logging
 from handlers.game_management import join_game, start_game, get_player_count
-from roles import role_templates, save_role_templates
+from roles import role_templates, pending_templates, save_role_templates
 from db import conn, cursor
+from config import MAINTAINER_ID
+import json
 
 logger = logging.getLogger("Mafia Bot PasscodeHandler")
 
@@ -21,7 +23,10 @@ async def handle_passcode(update: ContextTypes.DEFAULT_TYPE, context: ContextTyp
             if result[0] != user_input:
                 cursor.execute("UPDATE Users SET username = ? WHERE user_id = ?", (user_input, user_id))
                 conn.commit()
-            context.user_data["username"] = user_input
+                context.user_data["username"] = user_input
+            else:
+                # Name is the same, no update needed
+                context.user_data["username"] = user_input
         else:
             # Insert new user into the database
             cursor.execute("INSERT INTO Users (user_id, username) VALUES (?, ?)", (user_id, user_input))
@@ -29,6 +34,7 @@ async def handle_passcode(update: ContextTypes.DEFAULT_TYPE, context: ContextTyp
             context.user_data["username"] = user_input
         context.user_data["action"] = "join_game"  # Now expecting a passcode
         await context.bot.send_message(chat_id=update.effective_chat.id, text="Please enter the passcode to join the game.")
+
     elif action == "existing_user":
         # Check if the input is a name or a passcode
         if is_valid_passcode(user_input):
@@ -41,65 +47,92 @@ async def handle_passcode(update: ContextTypes.DEFAULT_TYPE, context: ContextTyp
             context.user_data["username"] = user_input
             context.user_data["action"] = "join_game"
             await context.bot.send_message(chat_id=update.effective_chat.id, text="Name updated. Please enter the passcode to join the game.")
+
     elif action == "join_game":
         await join_game(update, context, user_input)  # Pass user_input as the passcode
+
     elif action == "set_roles":
         # In the revised flow, roles are set via buttons, so passcode is not needed here
         await context.bot.send_message(chat_id=update.effective_chat.id, text="Please use the role buttons to set roles.")
+
     elif action == "start_game":
         await start_game(update, context, user_input)
-    elif action == "awaiting_template_name":
-        # Handle the input as template name
-        await save_template_to_json(update, context, user_input)
+
+    elif action == "awaiting_template_name_confirmation":
+        # Handle the input as template name and save as pending
+        await save_template_as_pending(update, context, user_input)
+
     else:
         await context.bot.send_message(chat_id=update.effective_chat.id, text="Unknown action. Please use /start to begin.")
 
-async def save_template_to_json(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE, template_name: str) -> None:
-    logger.debug("Saving template.")
+async def save_template_as_pending(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE, template_name: str) -> None:
+    logger.debug("Saving template as pending.")
     game_id = context.user_data.get('game_id')
-    player_count = context.user_data.get("player_count") # Get from context
-    roles_for_template = context.user_data.get('roles_for_template') # Get from context
+    player_count = context.user_data.get("player_count")  # Get from context
+    roles_for_template = context.user_data.get('roles_for_template')  # Get from context
+
     if not template_name:
-         await context.bot.send_message(chat_id=update.effective_chat.id, text="Invalid template name.")
-         return
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="Invalid template name.")
+        return
 
     if not game_id:
-      await context.bot.send_message(chat_id=update.effective_chat.id, text="No game selected.")
-      return
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="No game selected.")
+        return
     if not roles_for_template:
-      await context.bot.send_message(chat_id=update.effective_chat.id, text="No roles found.")
-      return
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="No roles found.")
+        return
     if not player_count:
-        player_count = get_player_count(game_id) # Get from DB, since we might not have it in user_data
-    
+        player_count = get_player_count(game_id)  # Get from DB, since we might not have it in user_data
+
     template_name_with_count = f"{template_name} - {player_count}"
 
-    # Check if the template name already exists
-    
-    if str(player_count) in role_templates:
-      for existing_template in role_templates[str(player_count)]:
-          if existing_template['name'] == template_name_with_count:
-              await context.bot.send_message(chat_id=update.effective_chat.id, text="A template with this name already exists. Please use a different name.")
-              return
+    # Check if the template name already exists in active templates
+    existing_templates = role_templates.get(str(player_count), [])
+    if any(t['name'] == template_name_with_count for t in existing_templates):
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="A template with this name already exists. Please use a different name.")
+        return
+
+    # Check if the template name already exists in pending templates
+    existing_pending = pending_templates.get(str(player_count), [])
+    if any(t['name'] == template_name_with_count for t in existing_pending):
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="This template is already pending confirmation.")
+        return
 
     new_template = {
         "name": template_name_with_count,
         "roles": roles_for_template
     }
-    
-    # Load existing template or initialize it
-    templates = role_templates
-    # If there are already templates for current player count
-    if str(player_count) in templates:
-        templates[str(player_count)].append(new_template)
-    else:
-        templates[str(player_count)] = [new_template]
-    
-    save_role_templates(templates)
-    role_templates.update(templates)
-    await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Template '{template_name_with_count}' saved.")
-    # Reset action
-    context.user_data['action'] = None
+
+    # Load existing pending templates
+    if str(player_count) not in pending_templates:
+        pending_templates[str(player_count)] = []
+    pending_templates[str(player_count)].append(new_template)
+
+    # Save the updated templates
+    save_role_templates(role_templates, pending_templates)
+
+    # Notify the maintainer
+    template_details = json.dumps(new_template, indent=2)
+
+    confirmation_keyboard = [
+        [InlineKeyboardButton("Confirm", callback_data=f"maintainer_confirm_{template_name_with_count}")],
+        [InlineKeyboardButton("Reject", callback_data=f"maintainer_reject_{template_name_with_count}")]
+    ]
+
+    confirmation_markup = InlineKeyboardMarkup(confirmation_keyboard)
+
+    try:
+        await context.bot.send_message(
+            chat_id=MAINTAINER_ID,
+            text=f"New role template pending confirmation:\n```{template_details}```",
+            parse_mode='MarkdownV2',
+            reply_markup=confirmation_markup
+        )
+    except Exception as e:
+        logger.error(f"Failed to send confirmation message to maintainer: {e}")
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="Failed to notify the maintainer. The template is saved as pending.")
+
+    await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Template '{template_name_with_count}' is pending confirmation by the maintainer.")
 
 def is_valid_passcode(text):
     # Basic check for a UUID-like format
