@@ -2,7 +2,7 @@ from telegram import InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import CallbackQueryHandler, ContextTypes
 import logging
 from db import conn, cursor
-from roles import available_roles, role_descriptions, role_templates, save_role_templates
+from roles import available_roles, role_descriptions, role_templates, pending_templates, save_role_templates
 from handlers.game_management import (
     show_role_buttons,
     confirm_and_set_roles,
@@ -15,7 +15,9 @@ from handlers.game_management import (
     start_game
 )
 from handlers.start_handler import start
+from config import MAINTAINER_ID
 import asyncio
+import json
 
 logger = logging.getLogger("Mafia Bot ButtonHandler")
 
@@ -55,7 +57,7 @@ async def handle_button(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes
                     (game_id, role)
                 )
             conn.commit()
-        await show_role_buttons(update, context, message_id)
+            await show_role_buttons(update, context, message_id)
 
     elif data == "create_game":
         logger.debug("create_game button pressed.")
@@ -149,15 +151,15 @@ async def handle_button(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes
         async with game_lock:
             for role, count in selected_template['roles'].items():
                 cursor.execute("""
-                    INSERT INTO GameRoles (game_id, role, count)
-                    VALUES (?, ?, ?)
-                    ON CONFLICT(game_id, role)
-                    DO UPDATE SET count=excluded.count
+                INSERT INTO GameRoles (game_id, role, count)
+                VALUES (?, ?, ?)
+                ON CONFLICT(game_id, role)
+                DO UPDATE SET count=excluded.count
                 """, (game_id, role, count))
             conn.commit()
-        await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Template '{template_name}' has been applied.")
-        # Refresh the role buttons to reflect the new counts
-        await show_role_buttons(update, context, message_id)
+            await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Template '{template_name}' has been applied.")
+            # Refresh the role buttons to reflect the new counts
+            await show_role_buttons(update, context, message_id)
 
     elif data.startswith("increase_"):
         role = data.split("_", 1)[1]
@@ -166,8 +168,8 @@ async def handle_button(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes
             await context.bot.send_message(chat_id=update.effective_chat.id, text="Invalid role.")
             return
         if not game_id:
-           await context.bot.send_message(chat_id=update.effective_chat.id, text="No game selected.")
-           return
+            await context.bot.send_message(chat_id=update.effective_chat.id, text="No game selected.")
+            return
         game_lock = game_locks.get(game_id)
         if not game_lock:
             game_lock = asyncio.Lock()
@@ -178,7 +180,7 @@ async def handle_button(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes
                 (game_id, role)
             )
             conn.commit()
-        await show_role_buttons(update, context, message_id)
+            await show_role_buttons(update, context, message_id)
 
     elif data.startswith("decrease_"):
         role = data.split("_", 1)[1]
@@ -206,7 +208,7 @@ async def handle_button(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes
             else:
                 logger.debug(f"Role count for {role} is already 0. Cannot decrease further.")
             conn.commit()
-        await show_role_buttons(update, context, message_id)
+            await show_role_buttons(update, context, message_id)
 
     elif data == "confirm_roles":
         logger.debug("confirm_roles button pressed.")
@@ -222,19 +224,23 @@ async def handle_button(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes
                 text=f"Roles have been confirmed and set successfully!\nRandomness source: {method}."
             )
 
-    # Save role template functionality
-    elif data == "save_template":
-      logger.debug("save_template button pressed.")
-      if not game_id:
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="No game selected.")
-        return
-    
-      await get_roles_and_save_template(update, context)
-     
-    elif data == "template_creation":
-        # This is an example, you can use to call this as a start
-        await get_roles_and_save_template(update,context)
-    
+    elif data == "confirm_and_add_template":
+        logger.debug("confirm_and_add_template button pressed.")
+        if not game_id:
+            await context.bot.send_message(chat_id=update.effective_chat.id, text="No game selected.")
+            return
+        # Initiate the template confirmation process
+        context.user_data['action'] = 'awaiting_template_name_confirmation'
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="Please enter a name for this template.")
+
+    elif data.startswith("maintainer_confirm_"):
+        template_name_with_count = data[len("maintainer_confirm_"):]
+        await handle_maintainer_confirmation(update, context, template_name_with_count, confirm=True)
+
+    elif data.startswith("maintainer_reject_"):
+        template_name_with_count = data[len("maintainer_reject_"):]
+        await handle_maintainer_confirmation(update, context, template_name_with_count, confirm=False)
+
     elif data == "keep_name":
         logger.debug("keep_name button pressed.")
         context.user_data["action"] = "join_game"
@@ -248,34 +254,49 @@ async def handle_button(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes
     else:
         await context.bot.send_message(chat_id=update.effective_chat.id, text="Unknown action.")
 
-
 # Refactor to get roles, player count and then save template
-async def get_roles_and_save_template(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE) -> None:
-    logger.debug("Getting roles and saving template.")
-    game_id = context.user_data.get('game_id')
-    if not game_id:
-      await context.bot.send_message(chat_id=update.effective_chat.id, text="No game selected.")
-      return
+# Removed get_roles_and_save_template since it's replaced by the new flow
 
-    player_count = get_player_count(game_id)
-    
-    # Fetch role counts from DB
-    cursor.execute("SELECT role, count FROM GameRoles WHERE game_id = ?", (game_id,))
-    roles_data = cursor.fetchall()
-    
-    # Create a dict of roles
-    role_counts = {role: count for role, count in roles_data if count > 0}
+async def handle_maintainer_confirmation(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE, template_name_with_count: str, confirm: bool) -> None:
+    user_id = update.effective_user.id
+    if str(user_id) != str(MAINTAINER_ID):
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="You are not authorized to perform this action.")
+        return
 
-    if not role_counts:
-         await context.bot.send_message(chat_id=update.effective_chat.id, text="No roles set, please set roles before saving a template.")
-         return
-    
-    context.user_data['roles_for_template'] = role_counts
-    context.user_data['player_count'] = player_count
-    context.user_data['action'] = 'awaiting_template_name'
+    # Extract player_count from template_name_with_count
+    if " - " not in template_name_with_count:
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="Invalid template format.")
+        return
 
-    await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Please enter the name for this template.")
+    template_name, player_count = template_name_with_count.rsplit(" - ", 1)
+    player_count = player_count.strip()
 
+    # Find and remove the template from pending_templates
+    if player_count not in pending_templates:
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="No pending templates found for this player count.")
+        return
+
+    template = next((t for t in pending_templates[player_count] if t['name'] == template_name_with_count), None)
+    if not template:
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="Template not found in pending templates.")
+        return
+
+    pending_templates[player_count].remove(template)
+
+    if confirm:
+        # Add to active templates
+        if player_count not in role_templates:
+            role_templates[player_count] = []
+        role_templates[player_count].append(template)
+        await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Template '{template_name_with_count}' has been confirmed and added to active templates.")
+    else:
+        await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Template '{template_name_with_count}' has been rejected.")
+
+    # Save the updated templates
+    save_role_templates(role_templates, pending_templates)
+
+    # TODO, notify the user who created the template
+    # This requires tracking which user created which template, which isn't implemented here
 
 # Create the handler instance
 button_handler = CallbackQueryHandler(handle_button)
