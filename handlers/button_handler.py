@@ -18,6 +18,7 @@ from handlers.start_handler import start
 from config import MAINTAINER_ID
 import asyncio
 import json
+from handlers.game_management import ROLES_PER_PAGE
 
 logger = logging.getLogger("Mafia Bot ButtonHandler")
 
@@ -38,6 +39,18 @@ async def handle_button(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes
     if data == "back_to_menu":
         logger.debug("back_to_menu button pressed.")
         await start(update, context)  # Ensure 'start' is imported or accessible
+        
+    elif data == "prev_page":
+        logger.debug("Previous page button pressed.")
+        current_page = context.user_data.get('current_page', 0)
+        context.user_data['current_page'] = max(0, current_page - 1)
+        await show_role_buttons(update, context, message_id)
+
+    elif data == "next_page":
+        logger.debug("Next page button pressed.")
+        current_page = context.user_data.get('current_page', 0)
+        context.user_data['current_page'] = current_page + 1
+        await show_role_buttons(update, context, message_id)
 
     elif data == "reset_roles":
         logger.debug("reset_roles button pressed.")
@@ -57,6 +70,7 @@ async def handle_button(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes
                     (game_id, role)
                 )
             conn.commit()
+            context.user_data['current_page'] = 0
             await show_role_buttons(update, context, message_id)
 
     elif data == "create_game":
@@ -94,6 +108,7 @@ async def handle_button(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes
             await context.bot.send_message(chat_id=update.effective_chat.id, text="You are not authorized to set roles.")
             return
         context.user_data["action"] = "set_roles"
+        context.user_data['current_page'] = 0
         await show_role_buttons(update, context)
 
     elif data == "start_game":
@@ -158,8 +173,8 @@ async def handle_button(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes
                 """, (game_id, role, count))
             conn.commit()
             await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Template '{template_name}' has been applied.")
-            # Refresh the role buttons to reflect the new counts
-            await show_role_buttons(update, context, message_id)
+        # Refresh the role buttons to reflect the new counts
+        await show_role_buttons(update, context, message_id)
 
     elif data.startswith("increase_"):
         role = data.split("_", 1)[1]

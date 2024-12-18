@@ -1,4 +1,3 @@
-# handlers/game_management.py
 import sqlite3
 from telegram import InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import ContextTypes
@@ -17,6 +16,9 @@ logger = logging.getLogger("Mafia Bot GameManagement")
 
 # Initialize an asyncio lock for synchronization
 role_counts_lock = asyncio.Lock()
+
+# Number of roles per page
+ROLES_PER_PAGE = 27
 
 async def get_random_shuffle(lst: list, api_key: str) -> list:
     """
@@ -92,18 +94,37 @@ async def show_role_buttons(update: ContextTypes.DEFAULT_TYPE, context: ContextT
         if role not in role_counts:
             role_counts[role] = 0
 
+    # Get the current page from user_data, default to 0
+    current_page = context.user_data.get('current_page', 0)
+    
+    start_index = current_page * ROLES_PER_PAGE
+    end_index = start_index + ROLES_PER_PAGE
+    roles_on_page = available_roles[start_index:end_index]
+
     keyboard = []
-    for role in available_roles:
+    for role in roles_on_page:
         keyboard.append([
-            InlineKeyboardButton("−", callback_data=f"decrease_{role}"),
+            InlineKeyboardButton("-", callback_data=f"decrease_{role}"),
             InlineKeyboardButton(f"{role} ({role_counts[role]})", callback_data=f"role_{role}"),
             InlineKeyboardButton("+", callback_data=f"increase_{role}")
         ])
+    
+    # Navigation buttons
+    nav_buttons = []
+    if current_page > 0:
+        nav_buttons.append(InlineKeyboardButton("Previous", callback_data="prev_page"))
+    if end_index < len(available_roles):
+        nav_buttons.append(InlineKeyboardButton("Next", callback_data="next_page"))
+    if nav_buttons:
+        keyboard.append(nav_buttons)
+        
     # Add Reset, Confirm, and Save Template buttons
-    keyboard.append([InlineKeyboardButton("Reset Roles", callback_data="reset_roles")])
     keyboard.append([
+        InlineKeyboardButton("Confirm Roles and Save as Template", callback_data="confirm_roles_and_save_template")
+    ])
+    keyboard.append([
+        InlineKeyboardButton("Reset Roles", callback_data="reset_roles"),
         InlineKeyboardButton("Confirm Roles", callback_data="confirm_roles"),
-        InlineKeyboardButton("Confirm Roles and Save as Template", callback_data="confirm_roles_and_save_template"),
         InlineKeyboardButton("Back to Menu", callback_data="back_to_menu")
     ])
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -155,7 +176,7 @@ async def confirm_and_set_roles(update: ContextTypes.DEFAULT_TYPE, context: Cont
     user_roles = []
     for role, count in role_counts.items():
         user_roles.extend([role] * count)
-        logger.debug(f"Role {role} assigned {count} times")
+    logger.debug(f"Role {role} assigned {count} times")
 
     # Attempt to shuffle using Random.org
     method_used = "fallback (local random)"
@@ -212,7 +233,7 @@ async def confirm_and_set_roles(update: ContextTypes.DEFAULT_TYPE, context: Cont
     total_players = len(users)
 
     # Prepare the summary message
-    summary_message = f"📊 **Game Summary** 📊\n\n" \
+    summary_message = f"📢 **Game Summary** 📢\n\n" \
                       f"**Total Players:** {total_players}\n\n" \
                       f"**Roles in the Game:**\n"
 
@@ -222,10 +243,10 @@ async def confirm_and_set_roles(update: ContextTypes.DEFAULT_TYPE, context: Cont
 
     # Send the summary message to all players
     cursor.execute("""
-        SELECT Roles.user_id, Users.username
-        FROM Roles
-        JOIN Users ON Roles.user_id = Users.user_id
-        WHERE Roles.game_id = ?
+    SELECT Roles.user_id, Users.username
+    FROM Roles
+    JOIN Users ON Roles.user_id = Users.user_id
+    WHERE Roles.game_id = ?
     """, (game_id,))
     player_roles = cursor.fetchall()
     for user_id, username in player_roles:
@@ -288,7 +309,6 @@ async def create_game(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.D
     logger.error("Failed to create game after multiple attempts.")
     await context.bot.send_message(chat_id=update.effective_chat.id, text="Failed to create game. Please try again.")
 
-
 async def join_game(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE, passcode: str) -> None:
     logger.debug("User attempting to join a game.")
     user_id = update.effective_user.id
@@ -302,17 +322,17 @@ async def join_game(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEF
 
         # Update or insert user information
         cursor.execute("""
-            INSERT INTO Users (user_id, username, last_updated)
-            VALUES (?, ?, CURRENT_TIMESTAMP)
-            ON CONFLICT(user_id) DO UPDATE SET
-                username = ?,
-                last_updated = CURRENT_TIMESTAMP
-            WHERE username != ? OR last_updated < CURRENT_TIMESTAMP
+        INSERT INTO Users (user_id, username, last_updated)
+        VALUES (?, ?, CURRENT_TIMESTAMP)
+        ON CONFLICT(user_id) DO UPDATE SET
+        username = ?,
+        last_updated = CURRENT_TIMESTAMP
+        WHERE username != ? OR last_updated < CURRENT_TIMESTAMP
         """, (user_id, username, username, username))
 
         cursor.execute("""
-            INSERT OR IGNORE INTO Roles (game_id, user_id, role)
-            VALUES (?, ?, NULL)
+        INSERT OR IGNORE INTO Roles (game_id, user_id, role)
+        VALUES (?, ?, NULL)
         """, (game_id, user_id))
 
         conn.commit()
@@ -350,10 +370,10 @@ async def start_game(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DE
         return
 
     cursor.execute("""
-        SELECT Roles.user_id, Roles.role, Users.username
-        FROM Roles
-        JOIN Users ON Roles.user_id = Users.user_id
-        WHERE Roles.game_id = ?
+    SELECT Roles.user_id, Roles.role, Users.username
+    FROM Roles
+    JOIN Users ON Roles.user_id = Users.user_id
+    WHERE Roles.game_id = ?
     """, (game_id,))
     player_roles = cursor.fetchall()
     logger.debug(f"Player roles: {player_roles}")
@@ -394,13 +414,13 @@ async def start_game(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DE
             "different results each time the program runs. "
             "This method is more than enough for a game of Mafia."
         )
-        randomness_method = "Python's random module"
+    randomness_method = "Python's random module"
 
     # Notify each player of their role and the randomness methodology
     for user_id, role, username in player_roles:
         if role:
             role_description = role_descriptions.get(role, "No description available.")
-            role_faction = role_factions.get(role, "Unknown Faction") 
+            role_faction = role_factions.get(role, "Unknown Faction")
             try:
                 await context.bot.send_message(
                     chat_id=user_id,
@@ -424,7 +444,7 @@ async def start_game(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DE
 
     # Send roles summary and randomness methodology to moderator
     await context.bot.send_message(
-        chat_id=moderator_id, 
+        chat_id=moderator_id,
         text=f"{role_message}"
     )
 
