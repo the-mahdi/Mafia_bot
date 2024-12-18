@@ -2,6 +2,8 @@ tmp
 *.db
 *.db-shm
 *.db-wal
+*.log
+*.pyc
 token.txt
 build/
 dist/
@@ -9,5 +11,3 @@ MafiaBot.spec
 build_notes.txt
 __pycache__/
 __pycache__
-*.log
-*.pyc

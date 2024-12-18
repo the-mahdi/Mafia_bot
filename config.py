@@ -9,14 +9,15 @@ def read_tokens():
     try:
         with open(resource_path('token.txt'), 'r') as file:
             lines = [line.strip() for line in file.readlines()]
-            if len(lines) < 2:
-                logger.error("token.txt must contain at least two lines: Telegram token and Random.org API key.")
+            if len(lines) < 3:
+                logger.error("token.txt must contain at least three lines: Telegram token, Random.org API key, and Maintainer Telegram ID.")
                 exit(1)
             TOKEN = lines[0]
             RANDOM_ORG_API_KEY = lines[1]
-            return TOKEN, RANDOM_ORG_API_KEY
+            MAINTAINER_ID = lines[2]
+            return TOKEN, RANDOM_ORG_API_KEY, MAINTAINER_ID
     except FileNotFoundError:
         logger.error("token.txt not found.")
         exit(1)
 
-TOKEN, RANDOM_ORG_API_KEY = read_tokens()
+TOKEN, RANDOM_ORG_API_KEY, MAINTAINER_ID = read_tokens()
