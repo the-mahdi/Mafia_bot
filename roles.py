@@ -22,27 +22,32 @@ def read_role_descriptions():
 def load_role_templates():
     try:
         with open(resource_path('role_templates.json'), 'r') as file:
-            templates = json.load(file).get('templates', {})
-        logger.debug(f"Role templates loaded: {templates}")
-        return templates
+            data = json.load(file)
+            templates = data.get('templates', {})
+            pending_templates = data.get('pending_templates', {})
+            logger.debug(f"Role templates loaded: {templates}")
+            logger.debug(f"Pending templates loaded: {pending_templates}")
+            return templates, pending_templates
     except FileNotFoundError:
         logger.warning("role_templates.json not found. Creating a new one.")
-        return {}
+        return {}, {}
     except json.JSONDecodeError:
-        logger.error("Invalid JSON format in role_templates.json. Starting with an empty template.")
-        return {}
+        logger.error("Invalid JSON format in role_templates.json. Starting with empty templates.")
+        return {}, {}
 
-def save_role_templates(templates):
+def save_role_templates(templates, pending_templates):
     with open(resource_path('role_templates.json'), 'w') as file:
-        json.dump({'templates': templates}, file, indent=2)
+        json.dump({'templates': templates, 'pending_templates': pending_templates}, file, indent=2)
     logger.debug(f"Role templates saved: {templates}")
+    logger.debug(f"Pending templates saved: {pending_templates}")
 
+def load_role_descriptions():
+    return read_role_descriptions()
+
+def load_available_roles():
+    return load_available_roles()
+
+# Initialize global variables
 available_roles = load_available_roles()
 role_descriptions = read_role_descriptions()
-
-# Ensure every available role has a description
-for role in available_roles:
-    if role not in role_descriptions:
-        role_descriptions[role] = "No description available for this role."
-
-role_templates = load_role_templates()
+role_templates, pending_templates = load_role_templates()
