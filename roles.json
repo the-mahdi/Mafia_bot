@@ -1,0 +1,139 @@
+{
+    "roles": [
+      {
+        "name": "ShahrSaD",
+        "description": "The \"Shahr Sade\" is a simple citizen without any special powers or abilities. Their primary goal is to help the town identify and eliminate the mafia members through voting during the day. They rely on their deduction skills and the information shared by other roles.",
+        "faction": "Villager"
+      },
+      {
+        "name": "Doctor",
+        "description": "The Doctor has the ability to save one person each night from being killed. They can choose to heal themselves or another player, effectively protecting them from an assassination attempt. The Doctor's role is crucial in maintaining balance and keeping the town's key players alive.",
+        "faction": "Villager"
+      },
+      {
+          "name": "Kar Agah",
+          "description": "The \"Kar Agah,\" or Detective, can investigate one person each night to determine if they are a member of the mafia or not. If they choose the God Father, their investigation will be incorrect. This role is vital for gathering information and guiding the town's decisions during the day.",
+          "faction": "Villager"
+      },
+      {
+          "name": "Tof Dar",
+          "description": "The \"Tofang Dar,\" or Gunman, can distribute real and fake guns to the players, which they can use during the game.",
+          "faction": "Villager"
+      },
+      {
+          "name": "Tak Tir",
+          "description": "The \"Tak Tir Andaz,\" or Sniper, has the ability to kill one player during the night. They die if they choose a citizen.",
+          "faction": "Villager"
+      },
+      {
+          "name": "Cowboy",
+          "description": "The Cowboy can choose a player to remove from the game. However, they will also leave the game after that action.",
+          "faction": "Villager"
+      },
+      {
+          "name": "Ruyin tan",
+          "description": "The \"Ruyin Tan,\" or Bulletproof, is immune to being killed at night once. If targeted, they will survive the first assassination attempt but can still be eliminated by other means, such as voting during the day.",
+          "faction": "Villager"
+      },
+      {
+          "name": "Jasoos",
+          "description": "The \"Jasoos,\" or Spy, will know who all the Mafia members are on the first night.",
+          "faction": "Villager"
+      },
+      {
+          "name": "Keshish",
+          "description": "The \"Keshish,\" or Priest, has the power to unsilence one player during the night. If voted out during the day, they can reveal the role of a player to the public.",
+          "faction": "Villager"
+      },
+      {
+          "name": "Nanva",
+          "description": "The \"Nanva,\" or Baker, is crucial for the town's survival. If they die, the town will starve to death after 5 days (or as announced by the coordinator).",
+          "faction": "Villager"
+      },
+      {
+          "name": "Bisim chi",
+          "description": "The \"Bisim Chi,\" or Radio Operator, can distribute a Bisim or Walkie-Talkie to two people. If both are citizens, the coordinator will wake them up so they can know each other.",
+          "faction": "Villager"
+      },
+      {
+          "name": "Hacker",
+          "description": "The Hacker will choose two people on the first night. If one of them is Mafia, the coordinator will publicly announce that the chosen list is dangerous. If two citizens or two Mafia are chosen, the announcement will not be dangerous.",
+          "faction": "Villager"
+      },
+      {
+          "name": "Efsha Gar",
+          "description": "The \"Efsha Gar,\" or Revealer, can choose 1 player on two separate nights (2 overall). The chosen players' roles will be revealed if they leave the game.",
+          "faction": "Villager"
+      },
+      {
+          "name": "Afyun",
+          "description": "The \"Afyun,\" or Opium Dealer, can neutralize the Mafia's abilities for one night. However, they will leave the game after taking this action.",
+          "faction": "Villager"
+      },
+      {
+          "name": "Gor Kan",
+          "description": "The \"Gor Kan,\" or Gravedigger, can request an announcement from the coordinator. The next day, the coordinator will announce the roles of the players who have left the game.",
+          "faction": "Villager"
+      },
+      {
+          "name": "Ghazi",
+          "description": "The \"Ghazi,\" or Judge, can wake up once during the game and change the outcome of the election.",
+          "faction": "Villager"
+      },
+      {
+          "name": "Majhool",
+          "description": "Two citizens who wake up to know each other and form a group. They should wake up each night and add a citizen to their group. If they choose a Mafia member, they all die.",
+          "faction": "Villager"
+      },
+      {
+          "name": "MafiaSa",
+          "description": "The \"Mafia Sade\" is a regular mafia member without any special abilities. Their goal is to blend in with the town, avoid detection, and eliminate town members during the night.",
+          "faction": "Mafia"
+      },
+      {
+          "name": "God F",
+          "description": "The God Father is the leader of the mafia. They appear innocent if investigated by the Detective and make the final decision on who the mafia targets each night. Their survival is crucial for the mafia's success.",
+          "faction": "Mafia"
+      },
+      {
+          "name": "Mashoghe",
+          "description": "The \"Mashoghe,\" or Lover of the God Father, makes the God Father furious if they die, allowing the Mafia to kill two people the following night.",
+          "faction": "Mafia"
+      },
+      {
+          "name": "Joker",
+          "description": "The Joker chooses a player during the night. If the Kar Agah or Detective chooses the same player, the Joker's action will reverse the results, revealing Mafia members as town and citizens as Mafia.",
+          "faction": "Mafia"
+      },
+      {
+          "name": "DoctorLec",
+          "description": "Doctor Lecter can save one of the Mafia members from the \"Tak Tir Andaz\" or Sniper each night.",
+          "faction": "Mafia"
+      },
+      {
+          "name": "Natasha",
+          "description": "Natasha can silence one player each night, preventing them from talking during the next day. The Keshish or Priest can neutralize the silence effect if they choose the same person.",
+          "faction": "Mafia"
+      },
+      {
+          "name": "Terrorist",
+          "description": "If the Terrorist dies during the day by a gun or vote, they can take someone with them out of the game.",
+          "faction": "Mafia"
+      },
+      {
+          "name": "Mozakere",
+          "description": "The \"Mozakere Konande,\" or Negotiator, can negotiate with some town citizens to become Mafia Sade. The negotiation can only be performed on Shahr Sade (simple citizens) or other roles announced by the coordinator.",
+          "faction": "Mafia"
+      },
+      {
+          "name": "ShahKosh",
+          "description": "The \"Shah Kosh,\" or King Slayer, can guess the role of a citizen during the night. If guessed correctly, that player will be removed from the game.",
+          "faction": "Mafia"
+      },
+      {
+          "name": "Zodiac",
+          "description": "An independent serial killer immune to night attacks, killing on even nights, but vulnerable to day actions and bombs.",
+          "faction": "Independent"
+      }
+    ]
+}

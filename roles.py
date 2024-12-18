@@ -5,18 +5,18 @@ import logging
 logger = logging.getLogger("Mafia Bot Roles")
 
 def load_available_roles():
-    with open(resource_path('list_roles.txt'), 'r') as file:
-        available_roles = [line.strip() for line in file if line.strip()]
+    with open(resource_path('roles.json'), 'r') as file:
+        data = json.load(file)
+        available_roles = [role['name'] for role in data.get('roles', [])]
     logger.debug(f"Available roles loaded: {available_roles}")
     return available_roles
 
-def read_role_descriptions():
+def load_role_descriptions():
     descriptions = {}
-    with open(resource_path('role_descriptions.txt'), 'r') as file:
-        for line in file:
-            if ':' in line:
-                role, description = line.strip().split(':', 1)
-                descriptions[role.strip()] = description.strip()
+    with open(resource_path('roles.json'), 'r') as file:
+        data = json.load(file)
+        for role in data.get('roles', []):
+            descriptions[role['name']] = role['description']
     return descriptions
 
 def load_role_templates():
@@ -41,25 +41,17 @@ def save_role_templates(templates, pending_templates):
     logger.debug(f"Role templates saved: {templates}")
     logger.debug(f"Pending templates saved: {pending_templates}")
 
-def load_role_descriptions():
-    return read_role_descriptions()
-
 def load_role_factions():
     factions = {}
-    try:
-        with open(resource_path('role_factions.txt'), 'r') as file:
-            for line in file:
-                if ':' in line:
-                    role, faction = line.strip().split(':', 1)
-                    factions[role.strip()] = faction.strip()
-        logger.debug(f"Role factions loaded: {factions}")
-    except FileNotFoundError:
-        logger.error("role_factions.txt not found.")
-        return {}
+    with open(resource_path('roles.json'), 'r') as file:
+        data = json.load(file)
+        for role in data.get('roles', []):
+            factions[role['name']] = role['faction']
+    logger.debug(f"Role factions loaded: {factions}")
     return factions
 
 # Initialize global variables
 available_roles = load_available_roles()
-role_descriptions = read_role_descriptions()
+role_descriptions = load_role_descriptions()
 role_templates, pending_templates = load_role_templates()
 role_factions = load_role_factions()
