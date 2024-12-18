@@ -17,7 +17,7 @@ async def handle_passcode(update: ContextTypes.DEFAULT_TYPE, context: ContextTyp
     user_id = update.effective_user.id
 
     if action == "awaiting_name":
-        # Check if the user already exists
+        # Handle name setting
         cursor.execute("SELECT username FROM Users WHERE user_id = ?", (user_id,))
         result = cursor.fetchone()
         if result:
@@ -85,7 +85,6 @@ async def handle_template_confirmation(update: ContextTypes.DEFAULT_TYPE, contex
     context.user_data['player_count'] = player_count
 
     await save_template_as_pending(update, context, template_name)
-
 
 async def save_template_as_pending(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE, template_name: str) -> None:
     logger.debug("Saving template as pending.")

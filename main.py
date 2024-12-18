@@ -4,8 +4,7 @@ from config import TOKEN  # Import config here
 from db import initialize_database  # Import db here
 from handlers.start_handler import start_handler
 from handlers.button_handler import button_handler
-from handlers.passcode_handler import passcode_handler
-
+from handlers.passcode_handler import passcode_handler  # Ensure this is imported if needed
 
 class ApplicationFilter(logging.Filter):
     def __init__(self, application_name):
@@ -60,7 +59,7 @@ def main():
     # Register handlers
     application.add_handler(start_handler)
     application.add_handler(button_handler)
-    application.add_handler(passcode_handler)
+    application.add_handler(passcode_handler)  # Register if passcode handling is retained
 
     # Register the error handler
     application.add_error_handler(error_handler)

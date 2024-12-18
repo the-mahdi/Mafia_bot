@@ -12,13 +12,13 @@ from handlers.game_management import (
     create_game,
     join_game,
     set_roles,
-    start_game
+    start_game,
+    start_latest_game,  # New function to be implemented
 )
 from handlers.start_handler import start
 from config import MAINTAINER_ID
 import asyncio
 import json
-from handlers.game_management import ROLES_PER_PAGE
 
 logger = logging.getLogger("Mafia Bot ButtonHandler")
 
@@ -39,7 +39,7 @@ async def handle_button(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes
     if data == "back_to_menu":
         logger.debug("back_to_menu button pressed.")
         await start(update, context)  # Ensure 'start' is imported or accessible
-        
+
     elif data == "prev_page":
         logger.debug("Previous page button pressed.")
         current_page = context.user_data.get('current_page', 0)
@@ -111,19 +111,17 @@ async def handle_button(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes
         context.user_data['current_page'] = 0
         await show_role_buttons(update, context)
 
-    elif data == "start_game":
-        logger.debug("start_game button pressed.")
-        if not game_id:
-            await context.bot.send_message(chat_id=update.effective_chat.id, text="No game selected.")
-            return
-        # Check if the user is the moderator
-        cursor.execute("SELECT moderator_id FROM Games WHERE game_id = ?", (game_id,))
-        result = cursor.fetchone()
-        if not result or result[0] != user_id:
-            await context.bot.send_message(chat_id=update.effective_chat.id, text="You are not authorized to start the game.")
-            return
-        context.user_data["action"] = "start_game"
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="Please enter the passcode to start the game.")
+    elif data == "manage_games":
+        logger.debug("manage_games button pressed.")
+        await show_manage_games_menu(update, context)
+
+    elif data in ["start_game_manage_games", "announce_voting", "announce_anonymous_voting",
+                  "send_mafia_message", "send_villagers_message", "send_independents_message"]:
+        # Handle buttons in the "Manage Games" menu
+        if data == "start_game_manage_games":
+            await start_latest_game(update, context)
+        else:
+            await context.bot.send_message(chat_id=update.effective_chat.id, text="The functionality has not been implemented yet.")
 
     elif data == "select_template":
         logger.debug("select_template button pressed.")
@@ -173,8 +171,8 @@ async def handle_button(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes
                 """, (game_id, role, count))
             conn.commit()
             await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Template '{template_name}' has been applied.")
-        # Refresh the role buttons to reflect the new counts
-        await show_role_buttons(update, context, message_id)
+            # Refresh the role buttons to reflect the new counts
+            await show_role_buttons(update, context, message_id)
 
     elif data.startswith("increase_"):
         role = data.split("_", 1)[1]
@@ -274,8 +272,22 @@ async def handle_button(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes
     else:
         await context.bot.send_message(chat_id=update.effective_chat.id, text="Unknown action.")
 
-# Refactor to get roles, player count and then save template
-# Removed get_roles_and_save_template since it's replaced by the new flow
+    # Refactor to get roles, player count and then save template
+    # Removed get_roles_and_save_template since it's replaced by the new flow
+
+async def show_manage_games_menu(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE):
+    logger.debug("Showing Manage Games menu.")
+    keyboard = [
+        [InlineKeyboardButton("Start Game", callback_data="start_game_manage_games")],
+        [InlineKeyboardButton("Announce voting", callback_data="announce_voting")],
+        [InlineKeyboardButton("Announce Anonymous voting", callback_data="announce_anonymous_voting")],
+        [InlineKeyboardButton("Send message to Mafia", callback_data="send_mafia_message")],
+        [InlineKeyboardButton("Send message to Villagers", callback_data="send_villagers_message")],
+        [InlineKeyboardButton("Send message to Independents", callback_data="send_independents_message")],
+        [InlineKeyboardButton("Back to Menu", callback_data="back_to_menu")],
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await context.bot.send_message(chat_id=update.effective_chat.id, text="Manage Games:", reply_markup=reply_markup)
 
 async def handle_maintainer_confirmation(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE, template_name_with_count: str, confirm: bool) -> None:
     user_id = update.effective_user.id

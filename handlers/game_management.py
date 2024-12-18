@@ -23,7 +23,7 @@ ROLES_PER_PAGE = 27
 async def get_random_shuffle(lst: list, api_key: str) -> list:
     """
     Shuffles a list using Random.org's generateIntegerSequences API. Returns the shuffled list if successful,
-    otherwise returns None.
+    otherwise returns a locally shuffled list.
     """
     if not lst:
         return lst.copy()
@@ -49,23 +49,23 @@ async def get_random_shuffle(lst: list, api_key: str) -> list:
             async with session.post('https://api.random.org/json-rpc/4/invoke', json=payload, headers=headers, timeout=10) as resp:
                 if resp.status != 200:
                     logger.error(f"Random.org API returned non-200 status code: {resp.status}")
-                    return None
+                    return random.sample(lst, len(lst))  # Fallback to local shuffle
                 data = await resp.json()
                 if 'result' in data and 'random' in data['result'] and 'data' in data['result']['random']:
                     shuffle_sequence = data['result']['random']['data'][0]  # First (and only) sequence
                     # Validate the shuffle_sequence
                     if sorted(shuffle_sequence) != list(range(1, len(lst) + 1)):
                         logger.error("Invalid shuffle sequence received from Random.org.")
-                        return None
+                        return random.sample(lst, len(lst))  # Fallback to local shuffle
                     # Convert to 0-based indices
                     shuffled_list = [lst[i - 1] for i in shuffle_sequence]
                     return shuffled_list
                 else:
                     logger.error(f"Unexpected response format from Random.org: {data}")
-                    return None
+                    return random.sample(lst, len(lst))  # Fallback to local shuffle
     except Exception as e:
         logger.error(f"Exception while fetching shuffle from Random.org: {e}")
-        return None
+        return random.sample(lst, len(lst))  # Fallback to local shuffle
 
 def get_player_count(game_id: int) -> int:
     cursor.execute("SELECT COUNT(*) FROM Roles WHERE game_id = ?", (game_id,))
@@ -96,7 +96,7 @@ async def show_role_buttons(update: ContextTypes.DEFAULT_TYPE, context: ContextT
 
     # Get the current page from user_data, default to 0
     current_page = context.user_data.get('current_page', 0)
-    
+
     start_index = current_page * ROLES_PER_PAGE
     end_index = start_index + ROLES_PER_PAGE
     roles_on_page = available_roles[start_index:end_index]
@@ -108,7 +108,7 @@ async def show_role_buttons(update: ContextTypes.DEFAULT_TYPE, context: ContextT
             InlineKeyboardButton(f"{role} ({role_counts[role]})", callback_data=f"role_{role}"),
             InlineKeyboardButton("+", callback_data=f"increase_{role}")
         ])
-    
+
     # Navigation buttons
     nav_buttons = []
     if current_page > 0:
@@ -117,7 +117,7 @@ async def show_role_buttons(update: ContextTypes.DEFAULT_TYPE, context: ContextT
         nav_buttons.append(InlineKeyboardButton("Next", callback_data="next_page"))
     if nav_buttons:
         keyboard.append(nav_buttons)
-        
+
     # Add Reset, Confirm, and Save Template buttons
     keyboard.append([
         InlineKeyboardButton("Confirm Roles and Save as Template", callback_data="confirm_roles_and_save_template")
@@ -176,7 +176,7 @@ async def confirm_and_set_roles(update: ContextTypes.DEFAULT_TYPE, context: Cont
     user_roles = []
     for role, count in role_counts.items():
         user_roles.extend([role] * count)
-    logger.debug(f"Role {role} assigned {count} times")
+    logger.debug(f"Role assignments: {user_roles}")
 
     # Attempt to shuffle using Random.org
     method_used = "fallback (local random)"
@@ -189,7 +189,11 @@ async def confirm_and_set_roles(update: ContextTypes.DEFAULT_TYPE, context: Cont
         else:
             logger.warning("Failed to shuffle roles using Random.org. Falling back to local random.")
 
-    # Shuffle users using Random.org if possible
+    else:
+        random.shuffle(user_roles)
+        logger.debug("Shuffled roles using local random.")
+
+    # Shuffle users to randomize role assignments
     if RANDOM_ORG_API_KEY and method_used == "Random.org":
         shuffled_users = await get_random_shuffle(users, RANDOM_ORG_API_KEY)
         if shuffled_users:
@@ -201,6 +205,7 @@ async def confirm_and_set_roles(update: ContextTypes.DEFAULT_TYPE, context: Cont
             method_used = "fallback (local random)"
     else:
         random.shuffle(users)
+        logger.debug("Shuffled users using local random.")
 
     # Assign roles to users
     try:
@@ -243,10 +248,10 @@ async def confirm_and_set_roles(update: ContextTypes.DEFAULT_TYPE, context: Cont
 
     # Send the summary message to all players
     cursor.execute("""
-    SELECT Roles.user_id, Users.username
-    FROM Roles
-    JOIN Users ON Roles.user_id = Users.user_id
-    WHERE Roles.game_id = ?
+        SELECT Roles.user_id, Users.username
+        FROM Roles
+        JOIN Users ON Roles.user_id = Users.user_id
+        WHERE Roles.game_id = ?
     """, (game_id,))
     player_roles = cursor.fetchall()
     for user_id, username in player_roles:
@@ -266,7 +271,6 @@ async def confirm_and_set_roles(update: ContextTypes.DEFAULT_TYPE, context: Cont
             except Exception as ex:
                 logger.error(f"Failed to notify moderator about summary message for user {user_id}: {ex}")
 
-    # --------------------- Send the roles, their count, and descriptions to all players ---------------------
     return True, method_used
 
 async def create_game(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -322,17 +326,17 @@ async def join_game(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEF
 
         # Update or insert user information
         cursor.execute("""
-        INSERT INTO Users (user_id, username, last_updated)
-        VALUES (?, ?, CURRENT_TIMESTAMP)
-        ON CONFLICT(user_id) DO UPDATE SET
-        username = ?,
-        last_updated = CURRENT_TIMESTAMP
-        WHERE username != ? OR last_updated < CURRENT_TIMESTAMP
+            INSERT INTO Users (user_id, username, last_updated)
+            VALUES (?, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(user_id) DO UPDATE SET
+            username = ?,
+            last_updated = CURRENT_TIMESTAMP
+            WHERE username != ? OR last_updated < CURRENT_TIMESTAMP
         """, (user_id, username, username, username))
 
         cursor.execute("""
-        INSERT OR IGNORE INTO Roles (game_id, user_id, role)
-        VALUES (?, ?, NULL)
+            INSERT OR IGNORE INTO Roles (game_id, user_id, role)
+            VALUES (?, ?, NULL)
         """, (game_id, user_id))
 
         conn.commit()
@@ -370,10 +374,10 @@ async def start_game(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DE
         return
 
     cursor.execute("""
-    SELECT Roles.user_id, Roles.role, Users.username
-    FROM Roles
-    JOIN Users ON Roles.user_id = Users.user_id
-    WHERE Roles.game_id = ?
+        SELECT Roles.user_id, Roles.role, Users.username
+        FROM Roles
+        JOIN Users ON Roles.user_id = Users.user_id
+        WHERE Roles.game_id = ?
     """, (game_id,))
     player_roles = cursor.fetchall()
     logger.debug(f"Player roles: {player_roles}")
@@ -404,6 +408,7 @@ async def start_game(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DE
             "If you think this is not fair, write your complaint on a paper, put it in a bottle, and throw it into the ocean. "
             "If I find it, I will consider it. I promise!"
         )
+        randomness_method = "Random.org"
     else:
         methodology_description = (
             "Randomness Methodology: Python's random module\n\n"
@@ -414,7 +419,7 @@ async def start_game(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DE
             "different results each time the program runs. "
             "This method is more than enough for a game of Mafia."
         )
-    randomness_method = "Python's random module"
+        randomness_method = "Python's random module"
 
     # Notify each player of their role and the randomness methodology
     for user_id, role, username in player_roles:
@@ -435,7 +440,7 @@ async def start_game(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DE
                         text=f"Failed to send role to user {username} (ID: {user_id}). Please check their privacy settings."
                     )
                 except Exception as ex:
-                    logger.error(f"Failed to notify moderator about user {user_id}: {ex}")
+                    logger.error(f"Failed to notify moderator about summary message for user {user_id}: {ex}")
         else:
             await context.bot.send_message(
                 chat_id=user_id,
@@ -461,3 +466,37 @@ async def set_roles(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEF
     logger.debug("Setting roles.")
     # This function can be expanded if additional functionality is needed
     await show_role_buttons(update, context)
+
+async def start_latest_game(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE) -> None:
+    logger.debug("Starting the latest game created by the moderator.")
+    user_id = update.effective_user.id
+
+    # Retrieve the latest game created by the moderator that hasn't been started yet
+    cursor.execute("""
+        SELECT game_id, started, randomness_method 
+        FROM Games 
+        WHERE moderator_id = ? 
+        ORDER BY rowid DESC 
+        LIMIT 1
+    """, (user_id,))
+    result = cursor.fetchone()
+
+    if not result:
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="You have not created any games.")
+        return
+
+    game_id, started, randomness_method = result
+
+    if started:
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="The latest game you created has already started.")
+        return
+
+    # Proceed to start the game without requiring a passcode
+    success, method = await confirm_and_set_roles(update, context, game_id)
+    if not success:
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="Error setting roles. Please try again.")
+    else:
+        await context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text=f"The game has started successfully!\nRandomness source: {method}."
+        )
