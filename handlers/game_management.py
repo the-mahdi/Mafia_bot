@@ -506,16 +506,28 @@ async def start_latest_game(update: ContextTypes.DEFAULT_TYPE, context: ContextT
     # Store game_id in context.user_data
     context.user_data['game_id'] = game_id
 
-    # Proceed to start the game without requiring a passcode
-    success, method = await confirm_and_set_roles(update, context, game_id)
-    if not success:
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="Error setting roles. Please try again.")
-    else:
-        await start_game(update, context)  # Call start_game without passcode
-        await context.bot.send_message(
-            chat_id=update.effective_chat.id,
-            text=f"The game has started successfully!\nRandomness source: {method}."
-        )
+    # ------------------- Commented Out Section -------------------
+    # Previously, confirm_and_set_roles was called here, which sends the game summary.
+    # Since roles should be confirmed manually, we remove this call.
+
+    # success, method = await confirm_and_set_roles(update, context, game_id)
+    # if not success:
+    #     await context.bot.send_message(chat_id=update.effective_chat.id, text="Error setting roles. Please try again.")
+    # else:
+    #     await start_game(update, context)  # Call start_game without passcode
+    #     await context.bot.send_message(
+    #         chat_id=update.effective_chat.id,
+    #         text=f"The game has started successfully!\nRandomness source: {method}."
+    #     )
+    # -------------------------------------------------------------
+
+    # Instead, directly start the game assuming roles have already been set
+    await start_game(update, context)
+    await context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text="The game has started successfully!"
+    )
+    logger.debug(f"Game {game_id} started successfully.")
 
 
 # Initialize a dictionary to store voting data for each game
