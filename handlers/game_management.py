@@ -8,7 +8,7 @@ import random
 import aiohttp
 from db import conn, cursor
 from roles import available_roles, role_descriptions, role_templates, role_factions
-from utils import resource_path
+from utils import resource_path, generate_voting_summary  
 from config import RANDOM_ORG_API_KEY
 import json
 
@@ -552,20 +552,22 @@ async def announce_voting(update: ContextTypes.DEFAULT_TYPE, context: ContextTyp
 
     # Fetch active (non-eliminated) players in the game
     cursor.execute("""
-        SELECT Roles.user_id, Users.username 
-        FROM Roles 
-        JOIN Users ON Roles.user_id = Users.user_id 
+        SELECT Roles.user_id, Users.username
+        FROM Roles
+        JOIN Users ON Roles.user_id = Users.user_id
         WHERE Roles.game_id = ? AND Roles.eliminated = 0
     """, (game_id,))
     players = cursor.fetchall()
     player_ids = [player[0] for player in players]
+    player_names = {user_id: username for user_id, username in players}
 
     # Initialize voting data
     game_voting_data[game_id] = {
         'votes': {},  # Will store individual votes for each voter
         'voters': set(player_ids),  # Initialize voters as the set of active player IDs
         'player_ids': player_ids,
-        'player_names': {user_id: username for user_id, username in players}  # Store player names
+        'player_names': player_names,  # Store player names
+        'summary_message_id': None  # Initialize summary message ID
     }
 
     # Send voting message to each player
@@ -580,8 +582,6 @@ async def announce_voting(update: ContextTypes.DEFAULT_TYPE, context: ContextTyp
         reply_markup = InlineKeyboardMarkup(keyboard)
 
         try:
-            # Store game_id in user_data for later retrieval
-            context.user_data['game_id'] = game_id
             await context.bot.send_message(
                 chat_id=player_id,
                 text=f"Vote for player elimination:",
@@ -589,6 +589,65 @@ async def announce_voting(update: ContextTypes.DEFAULT_TYPE, context: ContextTyp
             )
         except Exception as e:
             logger.error(f"Failed to send voting message to user {player_id}: {e}")
+
+    # Send initial voting summary to the moderator
+    await send_voting_summary(context, game_id) # Removed update parameter
+
+async def send_voting_summary(context: ContextTypes.DEFAULT_TYPE, game_id: str) -> None:
+    """Sends or updates the voting summary message to the moderator."""
+    logger.debug(f"Sending voting summary for game ID {game_id}.")
+
+    if game_id not in game_voting_data:
+        logger.error(f"Game ID {game_id} not found in voting data.")
+        return
+
+    # Fetch moderator ID
+    cursor.execute("SELECT moderator_id FROM Games WHERE game_id = ?", (game_id,))
+    result = cursor.fetchone()
+    if not result:
+        logger.error(f"Game ID {game_id} not found when fetching moderator.")
+        return
+    moderator_id = result[0]
+
+    voted_players = [
+        game_voting_data[game_id]['player_names'][voter_id]
+        for voter_id in game_voting_data[game_id]['player_ids']
+        if voter_id not in game_voting_data[game_id]['voters']
+    ]
+    not_voted_players = [
+        game_voting_data[game_id]['player_names'][voter_id]
+        for voter_id in game_voting_data[game_id]['voters']
+    ]
+
+    summary_message = generate_voting_summary(voted_players, not_voted_players)
+
+    # Check if a summary message already exists for this game
+    if game_voting_data[game_id]['summary_message_id']:
+        try:
+            # Edit the existing message
+            await context.bot.edit_message_text(
+                chat_id=moderator_id,
+                message_id=game_voting_data[game_id]['summary_message_id'],
+                text=summary_message,
+                parse_mode='Markdown'
+            )
+        except Exception as e:
+            logger.error(f"Failed to edit voting summary message: {e}")
+            # Optionally, send a new message if editing fails
+            message = await context.bot.send_message(
+                chat_id=moderator_id,
+                text=summary_message,
+                parse_mode='Markdown'
+            )
+            game_voting_data[game_id]['summary_message_id'] = message.message_id
+    else:
+        # Send a new message
+        message = await context.bot.send_message(
+            chat_id=moderator_id,
+            text=summary_message,
+            parse_mode='Markdown'
+        )
+        game_voting_data[game_id]['summary_message_id'] = message.message_id
 
 async def handle_vote(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE, game_id: str, target_id: int) -> None:
     logger.debug("Handling vote.")
@@ -678,12 +737,17 @@ async def final_confirm_vote(update: ContextTypes.DEFAULT_TYPE, context: Context
     voter_id = update.effective_user.id
     query = update.callback_query
     data_parts = query.data.split("_")
-    game_id = data_parts[3]  # Extract game_id from callback_data
+    game_id = data_parts[3]
 
     if game_id not in game_voting_data:
         await context.bot.send_message(chat_id=voter_id, text="Voting session not found.")
         return
 
+    # Check if the voter is part of the game
+    if voter_id not in game_voting_data[game_id]['player_ids']:
+        await context.bot.send_message(chat_id=voter_id, text="You are not part of this game.")
+        return
+    
     if voter_id not in game_voting_data[game_id]['voters']:
         await context.bot.send_message(chat_id=voter_id, text="You have already confirmed your votes.")
         return
@@ -692,6 +756,9 @@ async def final_confirm_vote(update: ContextTypes.DEFAULT_TYPE, context: Context
     game_voting_data[game_id]['voters'].remove(voter_id)
 
     await query.edit_message_text(text="Your votes have been finally confirmed.")
+
+    # Update the voting summary for the moderator
+    await send_voting_summary(context, game_id)
 
     # Check if all players have voted
     if not game_voting_data[game_id]['voters']:
@@ -774,19 +841,29 @@ async def process_voting_results(update: ContextTypes.DEFAULT_TYPE, context: Con
         return
     moderator_id = result[0]
 
-    # Send the summary message to the current chat and the moderator
-    try:
-        await context.bot.send_message(chat_id=update.effective_chat.id, text=summary_message, parse_mode='Markdown')
-    except Exception as e:
-        logger.error(f"Failed to send summary message to chat: {e}")
+    # Send the summary message to all players
+    for player_id in game_voting_data[game_id]['player_ids']:
+        try:
+            await context.bot.send_message(chat_id=player_id, text=summary_message, parse_mode='Markdown')
+        except Exception as e:
+            logger.error(f"Failed to send summary message to user {player_id}: {e}")
+            # Notify the moderator about the failure
+            try:
+                await context.bot.send_message(
+                    chat_id=moderator_id,
+                    text=f"⚠️ Failed to send summary message to user {player_id}."
+                )
+            except Exception as ex:
+                logger.error(f"Failed to notify moderator about failed message to user {player_id}: {ex}")
 
+    # Send the summary message to the moderator
     try:
         await context.bot.send_message(chat_id=moderator_id, text=summary_message, parse_mode='Markdown')
     except Exception as e:
         logger.error(f"Failed to send summary message to moderator {moderator_id}: {e}")
 
     # Generate detailed voting report
-    detailed_report = "📝 **Detailed Voting Report:**\n\n"
+    detailed_report = "🗳️ **Detailed Voting Report:**\n\n"
     for voter_id, votes in game_voting_data[game_id]['votes'].items():
         voter_name = player_names.get(voter_id, f"User {voter_id}")
         if votes:
@@ -796,11 +873,8 @@ async def process_voting_results(update: ContextTypes.DEFAULT_TYPE, context: Con
         else:
             detailed_report += f"• **{voter_name}** did not vote.\n"
 
-    # Fetch all player IDs
-    player_ids = [user_id for user_id, _ in players]
-
     # Send the detailed report to all players
-    for player_id in player_ids:
+    for player_id in game_voting_data[game_id]['player_ids']:
         try:
             await context.bot.send_message(chat_id=player_id, text=detailed_report, parse_mode='Markdown')
         except Exception as e:
@@ -808,7 +882,7 @@ async def process_voting_results(update: ContextTypes.DEFAULT_TYPE, context: Con
             # Optionally notify the moderator about the failure
             try:
                 await context.bot.send_message(
-                    chat_id=moderator_id, 
+                    chat_id=moderator_id,
                     text=f"⚠️ Failed to send detailed voting report to user {player_id}."
                 )
             except Exception as ex:
