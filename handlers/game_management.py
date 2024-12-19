@@ -534,7 +534,7 @@ async def start_latest_game(update: ContextTypes.DEFAULT_TYPE, context: ContextT
 game_voting_data = {}
 
 async def announce_voting(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE) -> None:
-    logger.debug("Announcing voting.")
+    logger.debug("Announcing Voting.")
     user_id = update.effective_user.id
     game_id = context.user_data.get('game_id')
     logger.debug(f"Announcing voting for game_id: {game_id}")
@@ -552,29 +552,30 @@ async def announce_voting(update: ContextTypes.DEFAULT_TYPE, context: ContextTyp
 
     # Fetch active (non-eliminated) players in the game
     cursor.execute("""
-        SELECT Roles.user_id, Users.username
-        FROM Roles
-        JOIN Users ON Roles.user_id = Users.user_id
-        WHERE Roles.game_id = ? AND Roles.eliminated = 0
+    SELECT Roles.user_id, Users.username
+    FROM Roles
+    JOIN Users ON Roles.user_id = Users.user_id
+    WHERE Roles.game_id = ? AND Roles.eliminated = 0
     """, (game_id,))
     players = cursor.fetchall()
     player_ids = [player[0] for player in players]
     player_names = {user_id: username for user_id, username in players}
 
-    # Initialize voting data
+    # Initialize voting data with 'anonymous' flag set to False
     game_voting_data[game_id] = {
         'votes': {},  # Will store individual votes for each voter
         'voters': set(player_ids),  # Initialize voters as the set of active player IDs
         'player_ids': player_ids,
         'player_names': player_names,  # Store player names
-        'summary_message_id': None  # Initialize summary message ID
+        'summary_message_id': None,  # Initialize summary message ID
+        'anonymous': False  # Flag to indicate anonymous voting
     }
 
     # Send voting message to each player
     for player_id, player_username in players:
         keyboard = []
         for target_id, target_username in players:
-            button_text = f"{target_username} ❌"  # Default to "Nay"
+            button_text = f"{target_username} 🗳️"  # Voting button
             callback_data = f"vote_{target_id}"
             keyboard.append([InlineKeyboardButton(button_text, callback_data=callback_data)])
 
@@ -584,14 +585,76 @@ async def announce_voting(update: ContextTypes.DEFAULT_TYPE, context: ContextTyp
         try:
             await context.bot.send_message(
                 chat_id=player_id,
-                text=f"Vote for player elimination:",
+                text=f"📢 **Voting Session:**\nVote for a player to eliminate:",
                 reply_markup=reply_markup
             )
         except Exception as e:
             logger.error(f"Failed to send voting message to user {player_id}: {e}")
 
     # Send initial voting summary to the moderator
-    await send_voting_summary(context, game_id) # Removed update parameter
+    await send_voting_summary(context, game_id)
+
+async def announce_anonymous_voting(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE) -> None:
+    logger.debug("Announcing Anonymous Voting.")
+    user_id = update.effective_user.id
+    game_id = context.user_data.get('game_id')
+    logger.debug(f"Announcing anonymous voting for game_id: {game_id}")
+
+    if not game_id:
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="No game selected.")
+        return
+
+    # Check if the user is the moderator
+    cursor.execute("SELECT moderator_id FROM Games WHERE game_id = ?", (game_id,))
+    result = cursor.fetchone()
+    if not result or result[0] != user_id:
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="You are not authorized to announce anonymous voting.")
+        return
+
+    # Fetch active (non-eliminated) players in the game
+    cursor.execute("""
+    SELECT Roles.user_id, Users.username
+    FROM Roles
+    JOIN Users ON Roles.user_id = Users.user_id
+    WHERE Roles.game_id = ? AND Roles.eliminated = 0
+    """, (game_id,))
+    players = cursor.fetchall()
+    player_ids = [player[0] for player in players]
+    player_names = {user_id: username for user_id, username in players}
+
+    # Initialize voting data with 'anonymous' flag set to True
+    game_voting_data[game_id] = {
+        'votes': {},  # Will store individual votes for each voter
+        'voters': set(player_ids),  # Initialize voters as the set of active player IDs
+        'player_ids': player_ids,
+        'player_names': player_names,  # Store player names
+        'summary_message_id': None,  # Initialize summary message ID
+        'anonymous': True  # Flag to indicate anonymous voting
+    }
+
+    # Send voting message to each player
+    for player_id, player_username in players:
+        keyboard = []
+        for target_id, target_username in players:
+            button_text = f"{target_username} 🗳️"  # Voting button
+            callback_data = f"vote_{target_id}"
+            keyboard.append([InlineKeyboardButton(button_text, callback_data=callback_data)])
+
+        keyboard.append([InlineKeyboardButton("Confirm Votes", callback_data=f"confirm_votes")])
+        reply_markup = InlineKeyboardMarkup(keyboard)
+
+        try:
+            await context.bot.send_message(
+                chat_id=player_id,
+                text=f"📢 **Anonymous Voting Session:**\nVote for a player to eliminate:",
+                reply_markup=reply_markup
+            )
+        except Exception as e:
+            logger.error(f"Failed to send voting message to user {player_id}: {e}")
+
+    # Send initial voting summary to the moderator
+    await send_voting_summary(context, game_id)
+
 
 async def send_voting_summary(context: ContextTypes.DEFAULT_TYPE, game_id: str) -> None:
     """Sends or updates the voting summary message to the moderator."""
@@ -808,10 +871,10 @@ async def process_voting_results(update: ContextTypes.DEFAULT_TYPE, context: Con
 
     # Fetch active (non-eliminated) player names
     cursor.execute("""
-        SELECT Roles.user_id, Users.username
-        FROM Roles
-        JOIN Users ON Roles.user_id = Users.user_id
-        WHERE Roles.game_id = ? AND Roles.eliminated = 0
+    SELECT Roles.user_id, Users.username
+    FROM Roles
+    JOIN Users ON Roles.user_id = Users.user_id
+    WHERE Roles.game_id = ? AND Roles.eliminated = 0
     """, (game_id,))
     players = cursor.fetchall()
     player_names = {user_id: username for user_id, username in players}
@@ -826,7 +889,7 @@ async def process_voting_results(update: ContextTypes.DEFAULT_TYPE, context: Con
     sorted_results = sorted(vote_counts.items(), key=lambda item: item[1], reverse=True)
 
     # Prepare the summary message
-    summary_message = "📊 **Voting Results (Summary):**\n\n"
+    summary_message = "🔍 **Voting Results (Summary):**\n\n"
     if sorted_results:
         for voted_id, count in sorted_results:
             summary_message += f"• **{player_names.get(voted_id, 'Unknown')}**: {count} vote(s)\n"
@@ -847,57 +910,58 @@ async def process_voting_results(update: ContextTypes.DEFAULT_TYPE, context: Con
             await context.bot.send_message(chat_id=player_id, text=summary_message, parse_mode='Markdown')
         except Exception as e:
             logger.error(f"Failed to send summary message to user {player_id}: {e}")
-            # Notify the moderator about the failure
-            try:
-                await context.bot.send_message(
-                    chat_id=moderator_id,
-                    text=f"⚠️ Failed to send summary message to user {player_id}."
-                )
-            except Exception as ex:
-                logger.error(f"Failed to notify moderator about failed message to user {player_id}: {ex}")
 
     # Send the summary message to the moderator
     try:
         await context.bot.send_message(chat_id=moderator_id, text=summary_message, parse_mode='Markdown')
     except Exception as e:
-        logger.error(f"Failed to send summary message to moderator {moderator_id}: {e}")
+        logger.error(f"Failed to send voting summary to moderator {moderator_id}: {e}")
 
     # Generate detailed voting report
     detailed_report = "🗳️ **Detailed Voting Report:**\n\n"
     for voter_id, votes in game_voting_data[game_id]['votes'].items():
         voter_name = player_names.get(voter_id, f"User {voter_id}")
         if votes:
-            voted_names = [player_names.get(voted_id, f"User {voted_id}") for voted_id in votes]
+            voted_names = [player_names.get(target_id, f"User {target_id}") for target_id in votes]
             voted_str = ", ".join(voted_names)
             detailed_report += f"• **{voter_name}** voted for: {voted_str}\n"
         else:
             detailed_report += f"• **{voter_name}** did not vote.\n"
 
-    # Send the detailed report to all players
-    for player_id in game_voting_data[game_id]['player_ids']:
-        try:
-            await context.bot.send_message(chat_id=player_id, text=detailed_report, parse_mode='Markdown')
-        except Exception as e:
-            logger.error(f"Failed to send detailed voting report to user {player_id}: {e}")
-            # Optionally notify the moderator about the failure
-            try:
-                await context.bot.send_message(
-                    chat_id=moderator_id,
-                    text=f"⚠️ Failed to send detailed voting report to user {player_id}."
-                )
-            except Exception as ex:
-                logger.error(f"Failed to notify moderator about failed message to user {player_id}: {ex}")
+    # Check if the voting was anonymous
+    anonymous = game_voting_data[game_id].get('anonymous', False)
 
-    # Send the detailed report to the moderator
-    try:
-        await context.bot.send_message(chat_id=moderator_id, text=detailed_report, parse_mode='Markdown')
-    except Exception as e:
-        logger.error(f"Failed to send detailed voting report to moderator {moderator_id}: {e}")
+    if anonymous:
+        # Send detailed report only to the moderator
+        try:
+            await context.bot.send_message(chat_id=moderator_id, text=detailed_report, parse_mode='Markdown')
+        except Exception as e:
+            logger.error(f"Failed to send detailed voting report to moderator {moderator_id}: {e}")
+    else:
+        # Send the detailed report to all players
+        for player_id in game_voting_data[game_id]['player_ids']:
+            try:
+                await context.bot.send_message(chat_id=player_id, text=detailed_report, parse_mode='Markdown')
+            except Exception as e:
+                logger.error(f"Failed to send detailed voting report to user {player_id}: {e}")
+                # Notify the moderator about the failure
+                try:
+                    await context.bot.send_message(
+                        chat_id=moderator_id,
+                        text=f"⚠️ Failed to send detailed voting report to user {player_id}."
+                    )
+                except Exception as ex:
+                    logger.error(f"Failed to notify moderator about failed message to user {player_id}: {ex}")
+
+        # Send the detailed report to the moderator
+        try:
+            await context.bot.send_message(chat_id=moderator_id, text=detailed_report, parse_mode='Markdown')
+        except Exception as e:
+            logger.error(f"Failed to send detailed voting report to moderator {moderator_id}: {e}")
 
     # Clean up voting data for the game
     del game_voting_data[game_id]
     logger.debug(f"Voting data for game ID {game_id} has been cleared.")
-
 
 async def eliminate_player(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE, game_id: str) -> None:
     logger.debug("Initiating player elimination process.")

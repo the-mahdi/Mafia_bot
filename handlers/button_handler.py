@@ -15,6 +15,7 @@ from handlers.game_management import (
     start_game,
     start_latest_game,
     announce_voting,
+    announce_anonymous_voting,
     handle_vote,
     confirm_votes,
     eliminate_player,
@@ -147,16 +148,23 @@ async def handle_button(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes
         # Handle buttons in the "Manage Games" menu
         if data == "start_game_manage_games":
             await start_latest_game(update, context)
+
         elif data == "announce_voting":
             await announce_voting(update, context)
+
         elif data == "announce_anonymous_voting":
-            await context.bot.send_message(chat_id=update.effective_chat.id, text="Announce Anonymous Voting functionality is not implemented yet.")
+            logger.debug("Announce Anonymous Voting button pressed.")
+            await announce_anonymous_voting(update, context)
+
         elif data == "send_mafia_message":
             await context.bot.send_message(chat_id=update.effective_chat.id, text="Send message to Mafia functionality is not implemented yet.")
+
         elif data == "send_villagers_message":
             await context.bot.send_message(chat_id=update.effective_chat.id, text="Send message to Villagers functionality is not implemented yet.")
+
         elif data == "send_independents_message":
             await context.bot.send_message(chat_id=update.effective_chat.id, text="Send message to Independents functionality is not implemented yet.")
+
         else:
             await context.bot.send_message(chat_id=update.effective_chat.id, text="The functionality has not been implemented yet.")
 
