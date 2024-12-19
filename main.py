@@ -1,7 +1,7 @@
 import logging
 from telegram.ext import Application
-from config import TOKEN
-from db import initialize_database
+from config.config import TOKEN
+from database.db_init import initialize_database
 from handlers.start_handler import start_handler
 from handlers.button_handler import button_handler, final_confirm_vote_handler, cancel_vote_handler
 from handlers.passcode_handler import passcode_handler

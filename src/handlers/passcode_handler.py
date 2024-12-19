@@ -1,9 +1,9 @@
 from telegram.ext import MessageHandler, filters, ContextTypes
 import logging
-from handlers.game_management import join_game, start_game, get_player_count
-from roles import role_templates, pending_templates, save_role_templates
-from db import conn, cursor
-from config import MAINTAINER_ID
+from handlers.game_management.game_management import join_game, start_game, get_player_count
+from roles.loader import role_templates, pending_templates, save_role_templates
+from database.db_init import conn, cursor
+from config.config import MAINTAINER_ID
 import json
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
