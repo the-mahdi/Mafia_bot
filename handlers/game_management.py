@@ -625,6 +625,7 @@ async def handle_vote(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.D
         """, (game_id,))
     players = cursor.fetchall()
     for target_id_loop, target_username in players:
+        # Get the vote status for THIS button's player using target_id_loop
         vote_status = game_voting_data[game_id]['player_votes'][target_id_loop]
         button_text = f"{target_username} ({vote_status})"
         callback_data = f"vote_{target_id_loop}"
