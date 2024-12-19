@@ -562,18 +562,17 @@ async def announce_voting(update: ContextTypes.DEFAULT_TYPE, context: ContextTyp
 
     # Initialize voting data
     game_voting_data[game_id] = {
-        'votes': {},
+        'votes': {},  # Will store individual votes for each voter
         'voters': set(player_ids),  # Initialize voters as the set of active player IDs
         'player_ids': player_ids,
-        'player_votes': {player[0]: '❌' for player in players}  # Initialize all votes to Nay
+        'player_names': {user_id: username for user_id, username in players}  # Store player names
     }
 
     # Send voting message to each player
     for player_id, player_username in players:
         keyboard = []
         for target_id, target_username in players:
-            vote_status = game_voting_data[game_id]['player_votes'][target_id]
-            button_text = f"{target_username} ({vote_status})"
+            button_text = f"{target_username} ❌"  # Default to "Nay"
             callback_data = f"vote_{target_id}"
             keyboard.append([InlineKeyboardButton(button_text, callback_data=callback_data)])
 
@@ -588,17 +587,13 @@ async def announce_voting(update: ContextTypes.DEFAULT_TYPE, context: ContextTyp
                 text=f"Vote for player elimination:",
                 reply_markup=reply_markup
             )
-            game_voting_data[game_id]['voters'].add(player_id)
         except Exception as e:
             logger.error(f"Failed to send voting message to user {player_id}: {e}")
-
 
 async def handle_vote(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE, game_id: str, target_id: int) -> None:
     logger.debug("Handling vote.")
     voter_id = update.effective_user.id
-
-    # Store game_id in context.bot_data for later retrieval
-    context.bot_data['game_id'] = game_id
+    query = update.callback_query
 
     if game_id not in game_voting_data:
         await context.bot.send_message(chat_id=voter_id, text="Voting session not found.")
@@ -608,26 +603,32 @@ async def handle_vote(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.D
         await context.bot.send_message(chat_id=voter_id, text="You have already confirmed your votes.")
         return
 
-    # Toggle vote status
-    if game_voting_data[game_id]['player_votes'][target_id] == '❌':
-        game_voting_data[game_id]['player_votes'][target_id] = '✅'
+    # Initialize voter's votes if not already present
+    if voter_id not in game_voting_data[game_id]['votes']:
+        game_voting_data[game_id]['votes'][voter_id] = []
+
+    # Toggle vote
+    if target_id in game_voting_data[game_id]['votes'][voter_id]:
+        game_voting_data[game_id]['votes'][voter_id].remove(target_id)
     else:
-        game_voting_data[game_id]['player_votes'][target_id] = '❌'
+        game_voting_data[game_id]['votes'][voter_id].append(target_id)
 
     # Update the button text
     keyboard = []
-    players = []
     cursor.execute("""
-            SELECT Roles.user_id, Users.username 
-            FROM Roles 
-            JOIN Users ON Roles.user_id = Users.user_id 
-            WHERE Roles.game_id = ? AND Roles.eliminated = 0
-        """, (game_id,))
+    SELECT Roles.user_id, Users.username
+    FROM Roles
+    JOIN Users ON Roles.user_id = Users.user_id
+    WHERE Roles.game_id = ? AND Roles.eliminated = 0
+    """, (game_id,))
     players = cursor.fetchall()
+
     for target_id_loop, target_username in players:
-        # Get the vote status for THIS button's player using target_id_loop
-        vote_status = game_voting_data[game_id]['player_votes'][target_id_loop]
-        button_text = f"{target_username} ({vote_status})"
+        # Check if the voter has voted for this target
+        if target_id_loop in game_voting_data[game_id]['votes'][voter_id]:
+            button_text = f"{target_username} ✅"  # Indicate vote with checkmark
+        else:
+            button_text = f"{target_username} ❌"  # Indicate no vote
         callback_data = f"vote_{target_id_loop}"
         keyboard.append([InlineKeyboardButton(button_text, callback_data=callback_data)])
 
@@ -635,22 +636,16 @@ async def handle_vote(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.D
     reply_markup = InlineKeyboardMarkup(keyboard)
 
     try:
-        await context.bot.edit_message_reply_markup(
-            chat_id=update.effective_chat.id,
-            message_id=update.callback_query.message.message_id,
-            reply_markup=reply_markup
-        )
+        await query.edit_message_reply_markup(reply_markup=reply_markup)
     except Exception as e:
         logger.error(f"Failed to edit message: {e}")
 
 async def confirm_votes(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE, game_id: str) -> None:
     logger.debug("Confirming votes.")
     voter_id = update.effective_user.id
+    query = update.callback_query
 
-    # Retrieve game_id from context.bot_data
-    game_id = context.bot_data.get('game_id')
-
-    if not game_id or game_id not in game_voting_data:
+    if game_id not in game_voting_data:
         await context.bot.send_message(chat_id=voter_id, text="Voting session not found.")
         return
 
@@ -658,18 +653,85 @@ async def confirm_votes(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes
         await context.bot.send_message(chat_id=voter_id, text="You have already confirmed your votes.")
         return
 
+    # Prepare confirmation message
+    voter_votes = game_voting_data[game_id]['votes'].get(voter_id, [])
+    player_names = game_voting_data[game_id]['player_names']
+    if voter_votes:
+        voted_for_names = [player_names.get(target_id, f"User {target_id}") for target_id in voter_votes]
+        confirmation_message = f"You are voting for: {', '.join(voted_for_names)}.\nAre you sure?"
+    else:
+        confirmation_message = "You have not cast any votes. Are you sure?"
+
+    # Add Final Confirm and Cancel buttons
+    keyboard = [
+        [InlineKeyboardButton("Final Confirm", callback_data=f"final_confirm_vote_{game_id}")],
+        [InlineKeyboardButton("Cancel", callback_data=f"cancel_vote_{game_id}")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    # Send confirmation message
+    await query.edit_message_text(text=confirmation_message, reply_markup=reply_markup)
+
+
+async def final_confirm_vote(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE) -> None:
+    logger.debug("Final vote confirmation.")
+    voter_id = update.effective_user.id
+    query = update.callback_query
+    data_parts = query.data.split("_")
+    game_id = data_parts[3]  # Extract game_id from callback_data
+
+    if game_id not in game_voting_data:
+        await context.bot.send_message(chat_id=voter_id, text="Voting session not found.")
+        return
+
+    if voter_id not in game_voting_data[game_id]['voters']:
+        await context.bot.send_message(chat_id=voter_id, text="You have already confirmed your votes.")
+        return
+
+    # Remove voter from the set of active voters
     game_voting_data[game_id]['voters'].remove(voter_id)
 
-    # Store the final votes
-    game_voting_data[game_id]['votes'][voter_id] = [
-        target_id for target_id, vote in game_voting_data[game_id]['player_votes'].items() if vote == '✅'
-    ]
-
-    await context.bot.send_message(chat_id=voter_id, text="Your votes have been confirmed.")
+    await query.edit_message_text(text="Your votes have been finally confirmed.")
 
     # Check if all players have voted
     if not game_voting_data[game_id]['voters']:
         await process_voting_results(update, context, game_id)
+
+async def cancel_vote(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE) -> None:
+    logger.debug("Cancelling vote.")
+    voter_id = update.effective_user.id
+    query = update.callback_query
+    data_parts = query.data.split("_")
+    game_id = data_parts[2]  # Extract game_id from callback_data
+
+    if game_id not in game_voting_data:
+        await context.bot.send_message(chat_id=voter_id, text="Voting session not found.")
+        return
+
+    # Reset the voter's votes
+    game_voting_data[game_id]['votes'][voter_id] = []
+
+    # Rebuild the voting buttons
+    keyboard = []
+    cursor.execute("""
+    SELECT Roles.user_id, Users.username
+    FROM Roles
+    JOIN Users ON Roles.user_id = Users.user_id
+    WHERE Roles.game_id = ? AND Roles.eliminated = 0
+    """, (game_id,))
+    players = cursor.fetchall()
+
+    for target_id_loop, target_username in players:
+        button_text = f"{target_username} ❌"  # Reset to default "Nay"
+        callback_data = f"vote_{target_id_loop}"
+        keyboard.append([InlineKeyboardButton(button_text, callback_data=callback_data)])
+
+    keyboard.append([InlineKeyboardButton("Confirm Votes", callback_data=f"confirm_votes")])
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    # Send the updated voting message
+    await query.edit_message_text(text="Vote cancelled. Please recast your votes.", reply_markup=reply_markup)
+
 
 async def process_voting_results(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE, game_id: str) -> None:
     logger.debug("Processing voting results.")

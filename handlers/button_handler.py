@@ -21,6 +21,8 @@ from handlers.game_management import (
     handle_elimination_confirmation,
     confirm_elimination,
     cancel_elimination,
+    final_confirm_vote,
+    cancel_vote
 )
 from handlers.start_handler import start
 from config import MAINTAINER_ID
@@ -174,6 +176,12 @@ async def handle_button(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes
             await confirm_votes(update, context, game_id)
         else:
             await context.bot.send_message(chat_id=update.effective_chat.id, text="Game ID not found.")
+
+    elif data.startswith("final_confirm_vote_"):
+        await final_confirm_vote(update, context)
+
+    elif data.startswith("cancel_vote_"):
+        await cancel_vote(update, context)
 
     elif data == "select_template":
         logger.debug("select_template button pressed.")
@@ -399,3 +407,5 @@ async def handle_maintainer_confirmation(update: ContextTypes.DEFAULT_TYPE, cont
 
 # Create the handler instance
 button_handler = CallbackQueryHandler(handle_button)
+final_confirm_vote_handler = CallbackQueryHandler(final_confirm_vote, pattern="^final_confirm_vote_")
+cancel_vote_handler = CallbackQueryHandler(cancel_vote, pattern="^cancel_vote_")
