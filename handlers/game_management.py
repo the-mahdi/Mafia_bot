@@ -244,7 +244,7 @@ async def confirm_and_set_roles(update: ContextTypes.DEFAULT_TYPE, context: Cont
 
     for role, count in role_counts:
         description = role_descriptions.get(role, "No description available.")
-        summary_message += f"- **{role}** ({count}): {description}\n"
+        summary_message += f"- **{role}** ({count}): {description}\n\n"
 
     # Send the summary message to all players
     cursor.execute("""

@@ -155,6 +155,11 @@ async def save_template_as_pending(update: ContextTypes.DEFAULT_TYPE, context: C
 
     await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Template '{template_name_with_count}' is pending confirmation by the maintainer.")
 
+    # Reset user_data for the next template
+    context.user_data['roles_for_template'] = None
+    context.user_data['player_count'] = None
+    context.user_data['action'] = None
+
 def is_valid_passcode(text):
     # Basic check for a UUID-like format
     import re

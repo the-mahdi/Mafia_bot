@@ -13,7 +13,7 @@ from handlers.game_management import (
     join_game,
     set_roles,
     start_game,
-    start_latest_game,  # New function to be implemented
+    start_latest_game,
     announce_voting,
     handle_vote,
     confirm_votes,
@@ -306,11 +306,11 @@ async def handle_button(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes
 
     elif data.startswith("maintainer_confirm_"):
         template_name_with_count = data[len("maintainer_confirm_"):]
-        await handle_elimination_confirmation(update, context, template_name_with_count, confirm=True)
+        await handle_maintainer_confirmation(update, context, template_name_with_count, confirm=True)
 
     elif data.startswith("maintainer_reject_"):
         template_name_with_count = data[len("maintainer_reject_"):]
-        await handle_elimination_confirmation(update, context, template_name_with_count, confirm=False)
+        await handle_maintainer_confirmation(update, context, template_name_with_count, confirm=False)
 
     elif data == "keep_name":
         logger.debug("keep_name button pressed.")
