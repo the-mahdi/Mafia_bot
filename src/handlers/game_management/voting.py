@@ -202,7 +202,7 @@ async def handle_vote(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.D
         await context.bot.send_message(chat_id=voter_id, text="You have already confirmed your votes.")
         return
 
-    # Initialize voter's votes if not already present
+    # Initialize voter's votes if not present
     if voter_id not in game_voting_data[game_id]['votes']:
         game_voting_data[game_id]['votes'][voter_id] = []
 
@@ -212,26 +212,24 @@ async def handle_vote(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.D
     else:
         game_voting_data[game_id]['votes'][voter_id].append(target_id)
 
-    # Update the button text
+    # Rebuild the keyboard based on permissions rather than DB query
+    permissions = game_voting_data[game_id]['permissions']
+    player_names = game_voting_data[game_id]['player_names']
+    
+    # Filter only those who can be voted
+    can_be_voted_players = [(uid, player_names[uid]) for uid in permissions if permissions[uid]['can_be_voted']]
+    
     keyboard = []
-    cursor.execute("""
-    SELECT Roles.user_id, Users.username
-    FROM Roles
-    JOIN Users ON Roles.user_id = Users.user_id
-    WHERE Roles.game_id = ? AND Roles.eliminated = 0
-    """, (game_id,))
-    players = cursor.fetchall()
-
-    for target_id_loop, target_username in players:
-        # Check if the voter has voted for this target
+    for target_id_loop, target_username in can_be_voted_players:
+        # Check if the voter selected this target
         if target_id_loop in game_voting_data[game_id]['votes'][voter_id]:
-            button_text = f"{target_username} ✅"  # Indicate vote with checkmark
+            button_text = f"{target_username} ✓"
         else:
-            button_text = f"{target_username} ❌"  # Indicate no vote
+            button_text = f"{target_username} ✗"
         callback_data = f"vote_{target_id_loop}"
         keyboard.append([InlineKeyboardButton(button_text, callback_data=callback_data)])
 
-    keyboard.append([InlineKeyboardButton("Confirm Votes", callback_data=f"confirm_votes")])
+    keyboard.append([InlineKeyboardButton("Confirm Votes", callback_data="confirm_votes")])
     reply_markup = InlineKeyboardMarkup(keyboard)
 
     try:
@@ -318,25 +316,21 @@ async def cancel_vote(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.D
     # Reset the voter's votes
     game_voting_data[game_id]['votes'][voter_id] = []
 
-    # Rebuild the voting buttons
-    keyboard = []
-    cursor.execute("""
-    SELECT Roles.user_id, Users.username
-    FROM Roles
-    JOIN Users ON Roles.user_id = Users.user_id
-    WHERE Roles.game_id = ? AND Roles.eliminated = 0
-    """, (game_id,))
-    players = cursor.fetchall()
+    # Rebuild the keyboard using permissions rather than DB
+    permissions = game_voting_data[game_id]['permissions']
+    player_names = game_voting_data[game_id]['player_names']
+    
+    can_be_voted_players = [(uid, player_names[uid]) for uid in permissions if permissions[uid]['can_be_voted']]
 
-    for target_id_loop, target_username in players:
-        button_text = f"{target_username} ❌"  # Reset to default "Nay"
+    keyboard = []
+    for target_id_loop, target_username in can_be_voted_players:
+        button_text = f"{target_username} ✗"  # Reset to default "not voted"
         callback_data = f"vote_{target_id_loop}"
         keyboard.append([InlineKeyboardButton(button_text, callback_data=callback_data)])
 
-    keyboard.append([InlineKeyboardButton("Confirm Votes", callback_data=f"confirm_votes")])
+    keyboard.append([InlineKeyboardButton("Confirm Votes", callback_data="confirm_votes")])
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    # Send the updated voting message
     await query.edit_message_text(text="Vote cancelled. Please recast your votes.", reply_markup=reply_markup)
 
 
