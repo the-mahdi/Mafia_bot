@@ -131,18 +131,10 @@ async def handle_button(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes
             return
         await eliminate_player(update, context, game_id)  # Call the elimination initiation function
 
-    elif data in ["start_game_manage_games", "announce_voting", "announce_anonymous_voting",
-                 "send_mafia_message", "send_villagers_message", "send_independents_message"]:
+    elif data in ["start_game_manage_games", "send_mafia_message", "send_villagers_message", "send_independents_message"]:
         # Handle buttons in the "Manage Games" menu
         if data == "start_game_manage_games":
             await start_latest_game(update, context)
-
-        elif data == "announce_voting":
-            await announce_voting(update, context)
-
-        elif data == "announce_anonymous_voting":
-            logger.debug("Announce Anonymous Voting button pressed.")
-            await announce_anonymous_voting(update, context)
 
         elif data == "send_mafia_message":
             await context.bot.send_message(chat_id=update.effective_chat.id, text="Send message to Mafia functionality is not implemented yet.")
@@ -343,6 +335,52 @@ async def handle_button(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes
         await cancel_elimination(update, context, game_id, target_user_id)
     # -------------------------------------------------------------------
 
+
+    elif data == "announce_voting":
+        logger.debug("Announce Voting button pressed.")
+        # Prompt the moderator with the permissions setup instead of directly starting voting
+        # Check if user is moderator here
+        game_id = context.user_data.get('game_id')
+        if not game_id:
+            await context.bot.send_message(chat_id=update.effective_chat.id, text="No game selected.")
+            return
+        # Check moderator
+        cursor.execute("SELECT moderator_id FROM Games WHERE game_id = ?", (game_id,))
+        result = cursor.fetchone()
+        if not result or result[0] != user_id:
+            await context.bot.send_message(chat_id=update.effective_chat.id, text="You are not authorized to announce voting.")
+            return
+
+        from src.handlers.game_management.voting import prompt_voting_permissions
+        await prompt_voting_permissions(update, context, game_id, anonymous=False)
+
+    elif data == "announce_anonymous_voting":
+        logger.debug("Announce Anonymous Voting button pressed.")
+        # Same as above but anonymous=True
+        game_id = context.user_data.get('game_id')
+        if not game_id:
+            await context.bot.send_message(chat_id=update.effective_chat.id, text="No game selected.")
+            return
+        # Check moderator
+        cursor.execute("SELECT moderator_id FROM Games WHERE game_id = ?", (game_id,))
+        result = cursor.fetchone()
+        if not result or result[0] != user_id:
+            await context.bot.send_message(chat_id=update.effective_chat.id, text="You are not authorized to announce anonymous voting.")
+            return
+
+        from src.handlers.game_management.voting import prompt_voting_permissions
+        await prompt_voting_permissions(update, context, game_id, anonymous=True)
+
+    elif data.startswith("toggle_can_vote_") or data.startswith("toggle_can_be_voted_"):
+        from src.handlers.game_management.voting import handle_voting_permission_toggle
+        await handle_voting_permission_toggle(update, context)
+
+    elif data == "confirm_permissions":
+        from src.handlers.game_management.voting import confirm_permissions
+        await confirm_permissions(update, context)
+
+
+
     else:
         await context.bot.send_message(chat_id=update.effective_chat.id, text="Unknown action.")
 
@@ -356,7 +394,7 @@ async def show_manage_games_menu(update: ContextTypes.DEFAULT_TYPE, context: Con
         [InlineKeyboardButton("Send message to Mafia", callback_data="send_mafia_message")],
         [InlineKeyboardButton("Send message to Villagers", callback_data="send_villagers_message")],
         [InlineKeyboardButton("Send message to Independents", callback_data="send_independents_message")],
-        [InlineKeyboardButton("Eliminate Player", callback_data="eliminate_player")],  # New Eliminate Player button
+        [InlineKeyboardButton("Eliminate Player", callback_data="eliminate_player")],
         [InlineKeyboardButton("Back to Menu", callback_data="back_to_menu")],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)

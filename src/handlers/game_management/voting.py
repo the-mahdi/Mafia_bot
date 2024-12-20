@@ -3,6 +3,7 @@ from telegram.ext import ContextTypes
 import logging
 from src.db import conn, cursor
 from src.utils import generate_voting_summary
+from telegram import InlineKeyboardMarkup, InlineKeyboardButton
 
 logger = logging.getLogger("Mafia Bot GameManagement.Voting")
 
@@ -438,3 +439,171 @@ async def process_voting_results(update: ContextTypes.DEFAULT_TYPE, context: Con
     # Clean up voting data for the game
     del game_voting_data[game_id]
     logger.debug(f"Voting data for game ID {game_id} has been cleared.")
+
+
+
+async def prompt_voting_permissions(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE, game_id: str, anonymous: bool) -> None:
+    """
+    Prompt the moderator with a list of players and their default voting permissions.
+    Moderator can toggle "Can Vote" and "Can be Voted" for each player.
+    """
+    # Fetch the moderator ID
+    cursor.execute("SELECT moderator_id FROM Games WHERE game_id = ?", (game_id,))
+    result = cursor.fetchone()
+    if not result:
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="Game not found.")
+        return
+    moderator_id = result[0]
+
+    # Fetch active players
+    cursor.execute("""
+    SELECT Roles.user_id, Users.username
+    FROM Roles
+    JOIN Users ON Roles.user_id = Users.user_id
+    WHERE Roles.game_id = ? AND Roles.eliminated = 0
+    """, (game_id,))
+    players = cursor.fetchall()
+
+    # Initialize permissions in memory
+    # By default everyone can vote and be voted
+    game_voting_data[game_id] = {
+        'votes': {},
+        'player_ids': [p[0] for p in players],
+        'player_names': {p[0]: p[1] for p in players},
+        'summary_message_id': None,
+        'anonymous': anonymous,
+        'permissions': {p[0]: {'can_vote': True, 'can_be_voted': True} for p in players},
+        'voters': set(),  # Will fill after confirmation based on can_vote
+    }
+
+    # Build the initial permissions keyboard
+    await show_voting_permissions(update, context, game_id, moderator_id)
+
+
+async def show_voting_permissions(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE, game_id: str, moderator_id: int, message_id=None) -> None:
+    """Show the current voting permissions in a nicely formatted table to the moderator."""
+    permissions = game_voting_data[game_id]['permissions']
+    player_names = game_voting_data[game_id]['player_names']
+
+    keyboard = []
+    # Header row (You can skip or include as text)
+    # We'll send the header as a separate message text instead.
+    # Rows: [Can Vote - Name - Can be Voted]
+    for user_id, name in player_names.items():
+        can_vote = "✅" if permissions[user_id]['can_vote'] else "❌"
+        can_be_voted = "✅" if permissions[user_id]['can_be_voted'] else "❌"
+        
+        keyboard.append([
+            InlineKeyboardButton(can_vote, callback_data=f"toggle_can_vote_{user_id}"),
+            InlineKeyboardButton(name, callback_data="noop"),
+            InlineKeyboardButton(can_be_voted, callback_data=f"toggle_can_be_voted_{user_id}")
+        ])
+
+    # Add a confirmation button at the bottom
+    keyboard.append([InlineKeyboardButton("Confirm & Start Voting", callback_data="confirm_permissions")])
+
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    text = "Set Voting Permissions (Toggle each player's ability to vote and/or be voted):\n\n" \
+           "Format: [Can Vote] - [Name] - [Can be Voted]"
+    if message_id:
+        await context.bot.edit_message_text(
+            chat_id=moderator_id,
+            message_id=message_id,
+            text=text,
+            reply_markup=reply_markup
+        )
+    else:
+        sent_msg = await context.bot.send_message(
+            chat_id=moderator_id,
+            text=text,
+            reply_markup=reply_markup
+        )
+        # Store the message_id if needed
+        game_voting_data[game_id]['permissions_message_id'] = sent_msg.message_id
+
+
+async def handle_voting_permission_toggle(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    data = query.data
+    await query.answer()
+
+    game_id = context.user_data.get('game_id')
+    if not game_id or game_id not in game_voting_data:
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="No active voting session.")
+        return
+
+    permissions = game_voting_data[game_id]['permissions']
+
+    if data.startswith("toggle_can_vote_"):
+        # This means we are toggling the 'can_vote' permission
+        target_user_id = int(data.replace("toggle_can_vote_", ""))
+        current = permissions[target_user_id]['can_vote']
+        permissions[target_user_id]['can_vote'] = not current
+    elif data.startswith("toggle_can_be_voted_"):
+        # This means we are toggling the 'can_be_voted' permission
+        target_user_id = int(data.replace("toggle_can_be_voted_", ""))
+        current = permissions[target_user_id]['can_be_voted']
+        permissions[target_user_id]['can_be_voted'] = not current
+    else:
+        # Unknown action
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="Unknown toggle action.")
+        return
+
+    moderator_id = update.effective_chat.id
+    # Now redraw the permissions keyboard with updated states
+    await show_voting_permissions(update, context, game_id, moderator_id, message_id=game_voting_data[game_id].get('permissions_message_id'))
+
+
+
+async def confirm_permissions(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Once the moderator confirms the permissions, start the actual voting session."""
+    query = update.callback_query
+    await query.answer()
+
+    game_id = context.user_data.get('game_id')
+    if not game_id or game_id not in game_voting_data:
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="No active voting session.")
+        return
+    
+    permissions = game_voting_data[game_id]['permissions']
+    # Set the voters set to those who can vote
+    voters = [uid for uid, perm in permissions.items() if perm['can_vote']]
+    game_voting_data[game_id]['voters'] = set(voters)
+
+    # Now proceed with sending voting messages only to those who can vote
+    # and include only players who can be voted.
+
+    # Prepare lists
+    can_be_voted_players = [(uid, game_voting_data[game_id]['player_names'][uid]) 
+                            for uid, perm in permissions.items() if perm['can_be_voted']]
+    
+    # Send voting messages to each player who can vote
+    for voter_id in voters:
+        keyboard = []
+        for target_id, target_username in can_be_voted_players:
+            button_text = f"{target_username} ❌"
+            callback_data = f"vote_{target_id}"
+            keyboard.append([InlineKeyboardButton(button_text, callback_data=callback_data)])
+        keyboard.append([InlineKeyboardButton("Confirm Votes", callback_data=f"confirm_votes")])
+        reply_markup = InlineKeyboardMarkup(keyboard)
+
+        try:
+            if game_voting_data[game_id]['anonymous']:
+                vote_text = "📢 **Anonymous Voting Session:**\nVote for a player to eliminate:"
+            else:
+                vote_text = "📢 **Voting Session:**\nVote for a player to eliminate:"
+
+            await context.bot.send_message(
+                chat_id=voter_id,
+                text=vote_text,
+                parse_mode='Markdown',
+                reply_markup=reply_markup
+            )
+        except Exception as e:
+            logger.error(f"Failed to send voting message to user {voter_id}: {e}")
+
+    # Send initial voting summary to the moderator
+    await send_voting_summary(context, game_id)
+
+    # Remove the permissions message, as setup is done.
+    await context.bot.edit_message_reply_markup(chat_id=query.message.chat_id, message_id=query.message.message_id, reply_markup=None)
