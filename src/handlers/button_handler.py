@@ -3,17 +3,17 @@ from telegram.ext import CallbackQueryHandler, ContextTypes
 import logging
 from src.db import conn, cursor
 from src.roles import available_roles, role_descriptions, role_templates, pending_templates, save_role_templates
-from src.handlers.game_management.game_management import (
-    show_role_buttons,
-    confirm_and_set_roles,
+# from src.handlers.game_management.game_management import (
+    # show_role_buttons,
+    # confirm_and_set_roles,
     # get_player_count,
     # get_templates_for_player_count,
     # get_random_shuffle,
     # create_game,
     # join_game,
-    set_roles,
-    start_game,
-    start_latest_game,
+    # set_roles,
+    # start_game,
+    # start_latest_game,
     # announce_voting,
     # announce_anonymous_voting,
     # handle_vote,
@@ -24,13 +24,16 @@ from src.handlers.game_management.game_management import (
     # cancel_elimination,
     # final_confirm_vote,
     # cancel_vote
-)
+# )
 from src.handlers.game_management.base import get_random_shuffle, get_player_count, get_templates_for_player_count
 from src.handlers.game_management.create_game import create_game
 from src.handlers.game_management.join_game import join_game
 from src.handlers.game_management.elimination import eliminate_player, handle_elimination_confirmation, confirm_elimination, cancel_elimination
 from src.handlers.game_management.voting import (announce_voting, announce_anonymous_voting, handle_vote,
                                                  confirm_votes, final_confirm_vote, cancel_vote)
+from src.handlers.game_management.start_game import start_game, start_latest_game
+from src.handlers.game_management.roles_setup import set_roles, show_role_buttons, confirm_and_set_roles
+
 from src.handlers.start_handler import start
 from src.config import MAINTAINER_ID
 import asyncio
