@@ -14,21 +14,23 @@ from src.handlers.game_management.game_management import (
     set_roles,
     start_game,
     start_latest_game,
-    announce_voting,
-    announce_anonymous_voting,
-    handle_vote,
-    confirm_votes,
-    eliminate_player,
-    handle_elimination_confirmation,
-    confirm_elimination,
-    cancel_elimination,
-    final_confirm_vote,
-    cancel_vote
+    # announce_voting,
+    # announce_anonymous_voting,
+    # handle_vote,
+    # confirm_votes,
+    # eliminate_player,
+    # handle_elimination_confirmation,
+    # confirm_elimination,
+    # cancel_elimination,
+    # final_confirm_vote,
+    # cancel_vote
 )
 from src.handlers.game_management.base import get_random_shuffle, get_player_count, get_templates_for_player_count
 from src.handlers.game_management.create_game import create_game
 from src.handlers.game_management.join_game import join_game
-
+from src.handlers.game_management.elimination import eliminate_player, handle_elimination_confirmation, confirm_elimination, cancel_elimination
+from src.handlers.game_management.voting import (announce_voting, announce_anonymous_voting, handle_vote,
+                                                 confirm_votes, final_confirm_vote, cancel_vote)
 from src.handlers.start_handler import start
 from src.config import MAINTAINER_ID
 import asyncio
