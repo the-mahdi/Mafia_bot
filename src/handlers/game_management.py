@@ -6,10 +6,10 @@ import uuid
 import asyncio
 import random
 import aiohttp
-from db import conn, cursor
-from roles import available_roles, role_descriptions, role_templates, role_factions
-from utils import resource_path, generate_voting_summary  
-from config import RANDOM_ORG_API_KEY
+from src.db import conn, cursor
+from src.roles import available_roles, role_descriptions, role_templates, role_factions
+from src.utils import resource_path, generate_voting_summary  
+from src.config import RANDOM_ORG_API_KEY
 import json
 
 logger = logging.getLogger("Mafia Bot GameManagement")

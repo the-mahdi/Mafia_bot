@@ -1,9 +1,9 @@
 from telegram import InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import CallbackQueryHandler, ContextTypes
 import logging
-from db import conn, cursor
-from roles import available_roles, role_descriptions, role_templates, pending_templates, save_role_templates
-from handlers.game_management import (
+from src.db import conn, cursor
+from src.roles import available_roles, role_descriptions, role_templates, pending_templates, save_role_templates
+from src.handlers.game_management import (
     show_role_buttons,
     confirm_and_set_roles,
     get_player_count,
@@ -25,8 +25,8 @@ from handlers.game_management import (
     final_confirm_vote,
     cancel_vote
 )
-from handlers.start_handler import start
-from config import MAINTAINER_ID
+from src.handlers.start_handler import start
+from src.config import MAINTAINER_ID
 import asyncio
 import json
 

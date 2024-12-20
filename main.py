@@ -1,10 +1,10 @@
 import logging
 from telegram.ext import Application
-from config import TOKEN
-from db import initialize_database
-from handlers.start_handler import start_handler
-from handlers.button_handler import button_handler, final_confirm_vote_handler, cancel_vote_handler
-from handlers.passcode_handler import passcode_handler
+from src.config import TOKEN
+from src.db import initialize_database
+from src.handlers.start_handler import start_handler
+from src.handlers.button_handler import button_handler, final_confirm_vote_handler, cancel_vote_handler
+from src.handlers.passcode_handler import passcode_handler
 
 class ApplicationFilter(logging.Filter):
     def __init__(self, application_name):

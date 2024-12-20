@@ -1,6 +1,6 @@
 import os
 import sys
-from utils import resource_path
+from src.utils import resource_path
 import logging
 
 logger = logging.getLogger("Mafia Bot Config")
