@@ -1,10 +1,11 @@
 import sqlite3
 from src.utils import resource_path
 import logging
+import os
 
 logger = logging.getLogger("Mafia Bot DB")
 
-conn = sqlite3.connect(resource_path('mafia_game.db'), check_same_thread=False)
+conn = sqlite3.connect(resource_path(os.path.join('db', 'mafia_game.db')), check_same_thread=False)
 cursor = conn.cursor()
 
 def initialize_database():
