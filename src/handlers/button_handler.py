@@ -6,9 +6,9 @@ from src.roles import available_roles, role_descriptions, role_templates, pendin
 from src.handlers.game_management.game_management import (
     show_role_buttons,
     confirm_and_set_roles,
-    get_player_count,
-    get_templates_for_player_count,
-    get_random_shuffle,
+    # get_player_count,
+    # get_templates_for_player_count,
+    # get_random_shuffle,
     create_game,
     join_game,
     set_roles,
@@ -25,6 +25,12 @@ from src.handlers.game_management.game_management import (
     final_confirm_vote,
     cancel_vote
 )
+from src.handlers.game_management.base import (
+    get_random_shuffle,
+    get_player_count,
+    get_templates_for_player_count,
+)
+
 from src.handlers.start_handler import start
 from src.config import MAINTAINER_ID
 import asyncio
