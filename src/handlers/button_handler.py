@@ -9,7 +9,7 @@ from src.handlers.game_management.game_management import (
     # get_player_count,
     # get_templates_for_player_count,
     # get_random_shuffle,
-    create_game,
+    # create_game,
     join_game,
     set_roles,
     start_game,
@@ -25,11 +25,8 @@ from src.handlers.game_management.game_management import (
     final_confirm_vote,
     cancel_vote
 )
-from src.handlers.game_management.base import (
-    get_random_shuffle,
-    get_player_count,
-    get_templates_for_player_count,
-)
+from src.handlers.game_management.base import get_random_shuffle, get_player_count, get_templates_for_player_count
+from src.handlers.game_management.create_game import create_game
 
 from src.handlers.start_handler import start
 from src.config import MAINTAINER_ID
