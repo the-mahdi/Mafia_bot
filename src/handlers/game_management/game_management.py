@@ -11,16 +11,9 @@ from src.roles import available_roles, role_descriptions, role_templates, role_f
 from src.utils import resource_path, generate_voting_summary  
 from src.config import RANDOM_ORG_API_KEY
 import json
-from src.handlers.game_management.base import get_random_shuffle
+from src.handlers.game_management.base import get_random_shuffle, role_counts_lock, ROLES_PER_PAGE
 
 logger = logging.getLogger("Mafia Bot GameManagement")
-
-# Initialize an asyncio lock for synchronization
-role_counts_lock = asyncio.Lock()
-
-# Number of roles per page
-ROLES_PER_PAGE = 27
-
 
 
 async def show_role_buttons(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE, message_id=None) -> int:
