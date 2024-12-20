@@ -1,4 +1,5 @@
 import logging
+import os
 from telegram.ext import Application
 from src.config import TOKEN
 from src.db import initialize_database
@@ -29,7 +30,7 @@ def setup_logging():
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
         handlers=[
             logging.StreamHandler(),
-            logging.FileHandler('mafia_bot.log')
+            logging.FileHandler(os.path.join("logs", "mafia_bot.log"))
         ]
     )
 
