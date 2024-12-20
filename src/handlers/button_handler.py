@@ -3,7 +3,7 @@ from telegram.ext import CallbackQueryHandler, ContextTypes
 import logging
 from src.db import conn, cursor
 from src.roles import available_roles, role_descriptions, role_templates, pending_templates, save_role_templates
-from src.handlers.game_management import (
+from src.handlers.game_management.game_management import (
     show_role_buttons,
     confirm_and_set_roles,
     get_player_count,
