@@ -575,7 +575,7 @@ async def announce_voting(update: ContextTypes.DEFAULT_TYPE, context: ContextTyp
     for player_id, player_username in players:
         keyboard = []
         for target_id, target_username in players:
-            button_text = f"{target_username} 🗳️"  # Voting button
+            button_text = f"{target_username} ❌"  # Voting button
             callback_data = f"vote_{target_id}"
             keyboard.append([InlineKeyboardButton(button_text, callback_data=callback_data)])
 
@@ -636,7 +636,7 @@ async def announce_anonymous_voting(update: ContextTypes.DEFAULT_TYPE, context: 
     for player_id, player_username in players:
         keyboard = []
         for target_id, target_username in players:
-            button_text = f"{target_username} 🗳️"  # Voting button
+            button_text = f"{target_username} ❌"  # Voting button
             callback_data = f"vote_{target_id}"
             keyboard.append([InlineKeyboardButton(button_text, callback_data=callback_data)])
 
