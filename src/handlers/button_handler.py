@@ -10,7 +10,7 @@ from src.handlers.game_management.game_management import (
     # get_templates_for_player_count,
     # get_random_shuffle,
     # create_game,
-    join_game,
+    # join_game,
     set_roles,
     start_game,
     start_latest_game,
@@ -27,6 +27,7 @@ from src.handlers.game_management.game_management import (
 )
 from src.handlers.game_management.base import get_random_shuffle, get_player_count, get_templates_for_player_count
 from src.handlers.game_management.create_game import create_game
+from src.handlers.game_management.join_game import join_game
 
 from src.handlers.start_handler import start
 from src.config import MAINTAINER_ID
