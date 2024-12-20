@@ -1,4 +1,3 @@
-# src/handlers/__init__.py
 from .button_handler import (
     button_handler,
     final_confirm_vote_handler,
