@@ -7,7 +7,7 @@ logger = logging.getLogger("Mafia Bot Config")
 
 def read_tokens():
     try:
-        with open(resource_path('token.txt'), 'r') as file:
+        with open(resource_path(os.path.join('data','token.txt')), 'r') as file:
             lines = [line.strip() for line in file.readlines()]
             if len(lines) < 3:
                 logger.error("token.txt must contain at least three lines: Telegram token, Random.org API key, and Maintainer Telegram ID.")

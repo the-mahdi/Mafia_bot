@@ -1,11 +1,11 @@
 import json
 from src.utils import resource_path
 import logging
-
+import os
 logger = logging.getLogger("Mafia Bot Roles")
 
 def load_available_roles():
-    with open(resource_path('roles.json'), 'r') as file:
+    with open(resource_path(os.path.join('data','roles.json')), 'r') as file:
         data = json.load(file)
         available_roles = [role['name'] for role in data.get('roles', [])]
     logger.debug(f"Available roles loaded: {available_roles}")
@@ -13,7 +13,7 @@ def load_available_roles():
 
 def load_role_descriptions():
     descriptions = {}
-    with open(resource_path('roles.json'), 'r') as file:
+    with open(resource_path(os.path.join('data','roles.json')), 'r') as file:
         data = json.load(file)
         for role in data.get('roles', []):
             descriptions[role['name']] = role['description']
@@ -21,7 +21,7 @@ def load_role_descriptions():
 
 def load_role_templates():
     try:
-        with open(resource_path('role_templates.json'), 'r') as file:
+        with open(resource_path(os.path.join('data','role_templates.json')), 'r') as file:
             data = json.load(file)
             templates = data.get('templates', {})
             pending_templates = data.get('pending_templates', {})
@@ -36,14 +36,14 @@ def load_role_templates():
         return {}, {}
 
 def save_role_templates(templates, pending_templates):
-    with open(resource_path('role_templates.json'), 'w') as file:
+    with open(resource_path(os.path.join('data','role_templates.json')), 'w') as file:
         json.dump({'templates': templates, 'pending_templates': pending_templates}, file, indent=2)
     logger.debug(f"Role templates saved: {templates}")
     logger.debug(f"Pending templates saved: {pending_templates}")
 
 def load_role_factions():
     factions = {}
-    with open(resource_path('roles.json'), 'r') as file:
+    with open(resource_path(os.path.join('data','roles.json')), 'r') as file:
         data = json.load(file)
         for role in data.get('roles', []):
             factions[role['name']] = role['faction']
