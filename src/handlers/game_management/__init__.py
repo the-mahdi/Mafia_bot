@@ -1,6 +1,6 @@
 from .base import get_random_shuffle, get_player_count, get_templates_for_player_count
 from .create_game import create_game
-from .elimination import eliminate_player, handle_elimination_confirmation, confirm_elimination, cancel_elimination
+from .player_management import eliminate_player, handle_elimination_confirmation, confirm_elimination, cancel_elimination
 from .join_game import join_game
 from .roles_setup import set_roles, show_role_buttons, confirm_and_set_roles
 from .start_game import start_game, start_latest_game
