@@ -14,6 +14,7 @@ from .voting import (
     send_voting_summary,
     process_voting_results
 )
+from .inquiry import send_inquiry_summary
 
 __all__ = [
     "get_random_shuffle",
@@ -41,5 +42,6 @@ __all__ = [
     "final_confirm_vote",
     "cancel_vote",
     "send_voting_summary",
-    "process_voting_results"
+    "process_voting_results",
+    "send_inquiry_summary",
 ]

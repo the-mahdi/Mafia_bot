@@ -11,8 +11,9 @@ from src.handlers.game_management import (get_random_shuffle, get_player_count, 
                                           confirm_votes, final_confirm_vote, cancel_vote,
                                           start_game, start_latest_game, set_roles,
                                           show_role_buttons, confirm_and_set_roles,
-                                            handle_revive_confirmation, confirm_revive, cancel_revive,
-                                            revive_player, send_voting_summary, process_voting_results)
+                                          handle_revive_confirmation, confirm_revive, cancel_revive,
+                                          revive_player, send_voting_summary, process_voting_results,
+                                          send_inquiry_summary)
 
 from src.handlers.start_handler import start
 
@@ -409,7 +410,19 @@ async def handle_button(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes
         from src.handlers.game_management.voting import confirm_permissions
         await confirm_permissions(update, context)
 
-
+    elif data == "inquiry_summary":
+        logger.debug("Inquiry (Summary) button pressed.")
+        game_id = context.user_data.get('game_id')
+        if not game_id:
+            await context.bot.send_message(chat_id=update.effective_chat.id, text="No game selected.")
+            return
+        # Check moderator
+        cursor.execute("SELECT moderator_id FROM Games WHERE game_id = ?", (game_id,))
+        result = cursor.fetchone()
+        if not result or result[0] != user_id:
+            await context.bot.send_message(chat_id=update.effective_chat.id, text="You are not authorized to use this feature.")
+            return
+        await send_inquiry_summary(update, context, game_id)
 
     else:
         await context.bot.send_message(chat_id=update.effective_chat.id, text="Unknown action.")
@@ -426,6 +439,7 @@ async def show_manage_games_menu(update: ContextTypes.DEFAULT_TYPE, context: Con
         [InlineKeyboardButton("Send message to Independents", callback_data="send_independents_message")],
         [InlineKeyboardButton("Eliminate Player", callback_data="eliminate_player")],
         [InlineKeyboardButton("Revive Player", callback_data="revive_player")],
+        [InlineKeyboardButton("Inquiry (Summary)", callback_data="inquiry_summary")],
         [InlineKeyboardButton("Back to Menu", callback_data="back_to_menu")],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
