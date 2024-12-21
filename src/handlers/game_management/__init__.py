@@ -1,6 +1,6 @@
 from .base import get_random_shuffle, get_player_count, get_templates_for_player_count
 from .create_game import create_game
-from .player_management import eliminate_player, handle_elimination_confirmation, confirm_elimination, cancel_elimination
+from .player_management import eliminate_player, handle_elimination_confirmation, confirm_elimination, cancel_elimination, revive_player, handle_revive_confirmation, confirm_revive, cancel_revive
 from .join_game import join_game
 from .roles_setup import set_roles, show_role_buttons, confirm_and_set_roles
 from .start_game import start_game, start_latest_game
@@ -24,6 +24,10 @@ __all__ = [
     "handle_elimination_confirmation",
     "confirm_elimination",
     "cancel_elimination",
+    "revive_player",
+    "handle_revive_confirmation",
+    "confirm_revive",
+    "cancel_revive",
     "join_game",
     "set_roles",
     "show_role_buttons",

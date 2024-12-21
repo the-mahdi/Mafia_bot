@@ -10,7 +10,9 @@ from src.handlers.game_management import (get_random_shuffle, get_player_count, 
                                           announce_anonymous_voting, handle_vote,
                                           confirm_votes, final_confirm_vote, cancel_vote,
                                           start_game, start_latest_game, set_roles,
-                                          show_role_buttons, confirm_and_set_roles)
+                                          show_role_buttons, confirm_and_set_roles,
+                                            handle_revive_confirmation, confirm_revive, cancel_revive,
+                                            revive_player, send_voting_summary, process_voting_results)
 
 from src.handlers.start_handler import start
 
@@ -334,7 +336,35 @@ async def handle_button(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes
         target_user_id = int(data.split("_")[2])
         await cancel_elimination(update, context, game_id, target_user_id)
     # -------------------------------------------------------------------
+    # ---------------------- Revival Handling ----------------------
+    elif data == "revive_player":
+        logger.debug("revive_player button pressed.")
+        if not game_id:
+            await context.bot.send_message(chat_id=update.effective_chat.id, text="No game selected.")
+            return
+        # Check if the user is the moderator
+        cursor.execute("SELECT moderator_id FROM Games WHERE game_id = ?", (game_id,))
+        result = cursor.fetchone()
+        if not result or result[0] != user_id:
+            await context.bot.send_message(chat_id=update.effective_chat.id, text="You are not authorized to revive players.")
+            return
+        await revive_player(update, context, game_id)
 
+    elif data.startswith("revive_confirm_"):
+        # Extract target_user_id from callback_data
+        target_user_id = int(data.split("_")[2])
+        await handle_revive_confirmation(update, context, game_id, target_user_id)
+
+    elif data.startswith("revive_yes_"):
+        # Extract target_user_id from callback_data
+        target_user_id = int(data.split("_")[2])
+        await confirm_revive(update, context, game_id, target_user_id)
+
+    elif data.startswith("revive_cancel_"):
+        # Extract target_user_id from callback_data
+        target_user_id = int(data.split("_")[2])
+        await cancel_revive(update, context, game_id, target_user_id)
+    # -------------------------------------------------------------------
 
     elif data == "announce_voting":
         logger.debug("Announce Voting button pressed.")
@@ -395,6 +425,7 @@ async def show_manage_games_menu(update: ContextTypes.DEFAULT_TYPE, context: Con
         [InlineKeyboardButton("Send message to Villagers", callback_data="send_villagers_message")],
         [InlineKeyboardButton("Send message to Independents", callback_data="send_independents_message")],
         [InlineKeyboardButton("Eliminate Player", callback_data="eliminate_player")],
+        [InlineKeyboardButton("Revive Player", callback_data="revive_player")],
         [InlineKeyboardButton("Back to Menu", callback_data="back_to_menu")],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)

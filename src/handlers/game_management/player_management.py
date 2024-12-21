@@ -5,7 +5,7 @@ import logging
 from src.db import conn, cursor
 from src.handlers.game_management.voting import process_voting_results, game_voting_data
 
-logger = logging.getLogger("Mafia Bot GameManagement.Elimination")
+logger = logging.getLogger("Mafia Bot GameManagement.PlayerManagement")
 
 async def eliminate_player(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE, game_id: str) -> None:
     logger.debug("Initiating player elimination process.")
@@ -102,3 +102,89 @@ async def cancel_elimination(update: ContextTypes.DEFAULT_TYPE, context: Context
     
     # Notify the moderator
     await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Elimination of {username} has been canceled.")
+
+async def revive_player(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE, game_id: str) -> None:
+    logger.debug("Initiating player revive process.")
+
+    # Fetch eliminated players
+    cursor.execute("""
+    SELECT Roles.user_id, Users.username
+    FROM Roles
+    JOIN Users ON Roles.user_id = Users.user_id
+    WHERE Roles.game_id = ? AND Roles.eliminated = 1
+    """, (game_id,))
+    players = cursor.fetchall()
+
+    if not players:
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="No eliminated players to revive.")
+        return
+
+    # Create revive buttons for each player
+    keyboard = []
+    for user_id, username in players:
+        keyboard.append([InlineKeyboardButton(username, callback_data=f"revive_confirm_{user_id}")])
+
+    # Add a back button
+    keyboard.append([InlineKeyboardButton("Back to Manage Games", callback_data="manage_games")])
+
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await context.bot.send_message(chat_id=update.effective_chat.id, text="Select a player to revive:", reply_markup=reply_markup)
+
+async def handle_revive_confirmation(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE, game_id: str, target_user_id: int) -> None:
+    logger.debug(f"Handling revive confirmation for user ID {target_user_id} in game ID {game_id}.")
+
+    # Fetch the username of the target user
+    cursor.execute("SELECT username FROM Users WHERE user_id = ?", (target_user_id,))
+    result = cursor.fetchone()
+    if not result:
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="User not found.")
+        return
+    username = result[0]
+
+    # Ask for confirmation
+    keyboard = [
+        [InlineKeyboardButton("Yes, Revive", callback_data=f"revive_yes_{target_user_id}")],
+        [InlineKeyboardButton("Cancel", callback_data=f"revive_cancel_{target_user_id}")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Are you sure you want to revive {username}?", reply_markup=reply_markup)
+
+async def confirm_revive(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE, game_id: str, target_user_id: int) -> None:
+    logger.debug(f"Confirming revive for user ID {target_user_id} in game ID {game_id}.")
+
+    # Mark the player as not eliminated in the database
+    cursor.execute("""
+    UPDATE Roles
+    SET eliminated = 0
+    WHERE game_id = ? AND user_id = ?
+    """, (game_id, target_user_id))
+    conn.commit()
+
+    # Fetch the username of the revived player
+    cursor.execute("SELECT username FROM Users WHERE user_id = ?", (target_user_id,))
+    result = cursor.fetchone()
+    username = result[0] if result else "Unknown"
+
+    # Notify the moderator
+    await context.bot.send_message(chat_id=update.effective_chat.id, text=f"{username} has been revived in the game.")
+
+    # Notify the revived player
+    try:
+        await context.bot.send_message(
+            chat_id=target_user_id,
+            text="You have been revived in the game! Welcome back!"
+        )
+    except Exception as e:
+        logger.error(f"Failed to notify user {target_user_id} about revival: {e}")
+        await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Failed to notify {username} about their revival.")
+
+async def cancel_revive(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE, game_id: str, target_user_id: int) -> None:
+    logger.debug(f"Revive of user ID {target_user_id} in game ID {game_id} has been canceled.")
+
+    # Fetch the username of the target user
+    cursor.execute("SELECT username FROM Users WHERE user_id = ?", (target_user_id,))
+    result = cursor.fetchone()
+    username = result[0] if result else "Unknown"
+
+    # Notify the moderator
+    await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Revive of {username} has been canceled.")
