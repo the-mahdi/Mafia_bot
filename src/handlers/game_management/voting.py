@@ -223,9 +223,9 @@ async def handle_vote(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.D
     for target_id_loop, target_username in can_be_voted_players:
         # Check if the voter selected this target
         if target_id_loop in game_voting_data[game_id]['votes'][voter_id]:
-            button_text = f"{target_username} ✓"
+            button_text = f"{target_username} ✅"
         else:
-            button_text = f"{target_username} ✗"
+            button_text = f"{target_username} ❌"
         callback_data = f"vote_{target_id_loop}"
         keyboard.append([InlineKeyboardButton(button_text, callback_data=callback_data)])
 
