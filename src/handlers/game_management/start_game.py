@@ -2,6 +2,7 @@ from telegram.ext import ContextTypes
 import logging
 from src.db import conn, cursor
 from src.roles import role_descriptions, role_factions
+from telegram.helpers import escape_markdown  # Newly added import
 
 logger = logging.getLogger("Mafia Bot GameManagement.StartGame")
 
@@ -81,10 +82,14 @@ async def start_game(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DE
         if role:
             role_description = role_descriptions.get(role, "No description available.")
             role_faction = role_factions.get(role, "Unknown Faction")
+            msg = (f"Hi {username}, your role is: {role} ({role_faction})\n\n"
+                   f"Role Description:\n{role_description}\n\n{methodology_description}")
             try:
+                safe_msg = escape_markdown(msg, version=2)  # Escape markdown characters
                 await context.bot.send_message(
                     chat_id=user_id,
-                    text=f"Hi {username}, your role is: {role} ({role_faction})\n\nRole Description:\n{role_description}\n\n{methodology_description}"
+                    text=safe_msg,
+                    parse_mode='MarkdownV2'
                 )
                 role_message += f"{username} (ID: {user_id}): {role}\n"
             except Exception as e:
@@ -103,9 +108,11 @@ async def start_game(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DE
             )
 
     # Send roles summary and randomness methodology to moderator
+    safe_role_message = escape_markdown(role_message, version=2)
     await context.bot.send_message(
         chat_id=moderator_id,
-        text=f"{role_message}"
+        text=safe_role_message,
+        parse_mode='MarkdownV2'
     )
 
     # Mark the game as started
