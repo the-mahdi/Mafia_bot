@@ -5,6 +5,8 @@ from src.db import conn, cursor
 from src.roles import available_roles, role_descriptions
 from src.config import RANDOM_ORG_API_KEY
 from .base import role_counts_lock, ROLES_PER_PAGE, get_random_shuffle
+from telegram.helpers import escape_markdown  # Newly added import
+import random
 
 logger = logging.getLogger("Mafia Bot GameManagement.RolesSetup")
 
@@ -192,10 +194,11 @@ async def confirm_and_set_roles(update: ContextTypes.DEFAULT_TYPE, context: Cont
     player_roles = cursor.fetchall()
     for user_id, username in player_roles:
         try:
+            safe_text = escape_markdown(summary_message, version=2)  # Escape user-provided markdown characters
             await context.bot.send_message(
                 chat_id=user_id,
-                text=summary_message,
-                parse_mode='Markdown'
+                text=safe_text,
+                parse_mode='MarkdownV2'
             )
         except Exception as e:
             logger.error(f"Failed to send game summary to user {user_id}: {e}")
