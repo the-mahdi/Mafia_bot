@@ -4,6 +4,7 @@ import logging
 from telegram.ext import ContextTypes
 from src.db import cursor
 from src.roles import role_factions
+from telegram.helpers import escape_markdown
 
 logger = logging.getLogger("Mafia Bot GameManagement.Inquiry")
 
@@ -50,10 +51,12 @@ async def send_inquiry_summary(update: ContextTypes.DEFAULT_TYPE, context: Conte
     else:
         summary_message += "- No players have been eliminated.\n"
 
+    safe_summary = escape_markdown(summary_message, version=2)
+
     # Send the summary to all players
     for user_id, _, _ in players:
         try:
-            await context.bot.send_message(chat_id=user_id, text=summary_message, parse_mode='Markdown')
+            await context.bot.send_message(chat_id=user_id, text=safe_summary, parse_mode='MarkdownV2')
         except Exception as e:
             logger.error(f"Failed to send inquiry summary to user {user_id}: {e}")
 
@@ -62,7 +65,7 @@ async def send_inquiry_summary(update: ContextTypes.DEFAULT_TYPE, context: Conte
     moderator_id = cursor.fetchone()[0]
     if moderator_id:
         try:
-            await context.bot.send_message(chat_id=moderator_id, text=summary_message, parse_mode='Markdown')
+            await context.bot.send_message(chat_id=moderator_id, text=safe_summary, parse_mode='MarkdownV2')
         except Exception as e:
             logger.error(f"Failed to send inquiry summary to moderator {moderator_id}: {e}")
 
@@ -120,10 +123,12 @@ async def send_detailed_inquiry_summary(update: ContextTypes.DEFAULT_TYPE, conte
     else:
         summary_message += "- No players have been eliminated.\n"
 
+    safe_summary = escape_markdown(summary_message, version=2)
+
     # Send the summary to all players
     for user_id, _, _ in players:
         try:
-            await context.bot.send_message(chat_id=user_id, text=summary_message, parse_mode='Markdown')
+            await context.bot.send_message(chat_id=user_id, text=safe_summary, parse_mode='MarkdownV2')
         except Exception as e:
             logger.error(f"Failed to send detailed inquiry summary to user {user_id}: {e}")
 
@@ -132,6 +137,6 @@ async def send_detailed_inquiry_summary(update: ContextTypes.DEFAULT_TYPE, conte
     moderator_id = cursor.fetchone()[0]
     if moderator_id:
         try:
-            await context.bot.send_message(chat_id=moderator_id, text=summary_message, parse_mode='Markdown')
+            await context.bot.send_message(chat_id=moderator_id, text=safe_summary, parse_mode='MarkdownV2')
         except Exception as e:
             logger.error(f"Failed to send detailed inquiry summary to moderator {moderator_id}: {e}")
