@@ -4,6 +4,7 @@ import logging
 from src.db import conn, cursor
 from src.utils import generate_voting_summary
 from telegram import InlineKeyboardMarkup, InlineKeyboardButton
+from telegram.helpers import escape_markdown  # <-- New import
 
 logger = logging.getLogger("Mafia Bot GameManagement.Voting")
 
@@ -160,32 +161,33 @@ async def send_voting_summary(context: ContextTypes.DEFAULT_TYPE, game_id: str) 
     ]
 
     summary_message = generate_voting_summary(voted_players, not_voted_players)
+    safe_summary = escape_markdown(summary_message, version=2)  # Escape summary
 
     # Check if a summary message already exists for this game
     if game_voting_data[game_id]['summary_message_id']:
         try:
-            # Edit the existing message
+            # Edit the existing message using safe_summary
             await context.bot.edit_message_text(
                 chat_id=moderator_id,
                 message_id=game_voting_data[game_id]['summary_message_id'],
-                text=summary_message,
-                parse_mode='Markdown'
+                text=safe_summary,
+                parse_mode='MarkdownV2'  # Updated
             )
         except Exception as e:
             logger.error(f"Failed to edit voting summary message: {e}")
             # Optionally, send a new message if editing fails
             message = await context.bot.send_message(
                 chat_id=moderator_id,
-                text=summary_message,
-                parse_mode='Markdown'
+                text=safe_summary,
+                parse_mode='MarkdownV2'  # Updated
             )
             game_voting_data[game_id]['summary_message_id'] = message.message_id
     else:
         # Send a new message
         message = await context.bot.send_message(
             chat_id=moderator_id,
-            text=summary_message,
-            parse_mode='Markdown'
+            text=safe_summary,
+            parse_mode='MarkdownV2'  # Updated
         )
         game_voting_data[game_id]['summary_message_id'] = message.message_id
 
@@ -367,6 +369,9 @@ async def process_voting_results(update: ContextTypes.DEFAULT_TYPE, context: Con
     else:
         summary_message += "No votes were cast."
 
+    # Escape summary message before sending
+    safe_summary = escape_markdown(summary_message, version=2)
+
     # Fetch moderator ID
     cursor.execute("SELECT moderator_id FROM Games WHERE game_id = ?", (game_id,))
     result = cursor.fetchone()
@@ -378,13 +383,13 @@ async def process_voting_results(update: ContextTypes.DEFAULT_TYPE, context: Con
     # Send the summary message to all players
     for player_id in game_voting_data[game_id]['player_ids']:
         try:
-            await context.bot.send_message(chat_id=player_id, text=summary_message, parse_mode='Markdown')
+            await context.bot.send_message(chat_id=player_id, text=safe_summary, parse_mode='MarkdownV2')
         except Exception as e:
             logger.error(f"Failed to send summary message to user {player_id}: {e}")
 
     # Send the summary message to the moderator
     try:
-        await context.bot.send_message(chat_id=moderator_id, text=summary_message, parse_mode='Markdown')
+        await context.bot.send_message(chat_id=moderator_id, text=safe_summary, parse_mode='MarkdownV2')
     except Exception as e:
         logger.error(f"Failed to send voting summary to moderator {moderator_id}: {e}")
 
@@ -399,20 +404,23 @@ async def process_voting_results(update: ContextTypes.DEFAULT_TYPE, context: Con
         else:
             detailed_report += f"• **{voter_name}** did not vote.\n"
 
+    # Escape detailed report
+    safe_detailed_report = escape_markdown(detailed_report, version=2)
+
     # Check if the voting was anonymous
     anonymous = game_voting_data[game_id].get('anonymous', False)
 
     if anonymous:
         # Send detailed report only to the moderator
         try:
-            await context.bot.send_message(chat_id=moderator_id, text=detailed_report, parse_mode='Markdown')
+            await context.bot.send_message(chat_id=moderator_id, text=safe_detailed_report, parse_mode='MarkdownV2')
         except Exception as e:
             logger.error(f"Failed to send detailed voting report to moderator {moderator_id}: {e}")
     else:
         # Send the detailed report to all players
         for player_id in game_voting_data[game_id]['player_ids']:
             try:
-                await context.bot.send_message(chat_id=player_id, text=detailed_report, parse_mode='Markdown')
+                await context.bot.send_message(chat_id=player_id, text=safe_detailed_report, parse_mode='MarkdownV2')
             except Exception as e:
                 logger.error(f"Failed to send detailed voting report to user {player_id}: {e}")
                 # Notify the moderator about the failure
@@ -426,7 +434,7 @@ async def process_voting_results(update: ContextTypes.DEFAULT_TYPE, context: Con
 
         # Send the detailed report to the moderator
         try:
-            await context.bot.send_message(chat_id=moderator_id, text=detailed_report, parse_mode='Markdown')
+            await context.bot.send_message(chat_id=moderator_id, text=safe_detailed_report, parse_mode='MarkdownV2')
         except Exception as e:
             logger.error(f"Failed to send detailed voting report to moderator {moderator_id}: {e}")
 
