@@ -19,7 +19,7 @@ This bot enable hosting and managing Mafia games on Telegram.
 
 ## Introduction
 
-The Mafia Game Telegram Bot is designed to simplify the process of hosting and managing Mafia-style games directly on Telegram. In this major update, we’ve reworked many functionalities, improved reliability, and added interactive features to enhance your gaming experience.
+The Mafia Game Telegram Bot is designed to simplify the process of hosting and managing Mafia-style games directly on Telegram.
 
 ---
 
