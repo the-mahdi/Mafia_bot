@@ -1,10 +1,10 @@
-
 import sqlite3
 from telegram.ext import ContextTypes
 import logging
 import uuid
 from src.db import conn, cursor
 from src.roles import available_roles
+from telegram.helpers import escape_markdown
 
 logger = logging.getLogger("Mafia Bot GameManagement.CreateGame")
 
@@ -37,9 +37,11 @@ async def create_game(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.D
             logger.debug(f"Game created. game_id stored in user_data: {game_id}")
 
             message = f"Game created successfully!\nPasscode: {passcode}\nShare this passcode with players to join."
-            await context.bot.send_message(chat_id=update.effective_chat.id, text=message)
-            # Send the passcode without other text to make the copy-paste easier
-            await context.bot.send_message(chat_id=update.effective_chat.id, text=passcode)
+            safe_message = escape_markdown(message, version=2)
+            await context.bot.send_message(chat_id=update.effective_chat.id, text=safe_message, parse_mode='MarkdownV2')
+            # Escape the passcode message as well
+            safe_passcode = escape_markdown(passcode, version=2)
+            await context.bot.send_message(chat_id=update.effective_chat.id, text=safe_passcode, parse_mode='MarkdownV2')
             return  # Exit the loop if game creation is successful
         except sqlite3.IntegrityError:
             logger.error(f"Failed to create game due to game_id collision. Attempt {attempts + 1}/{max_attempts}")
