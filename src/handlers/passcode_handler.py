@@ -10,6 +10,7 @@ from src.config import MAINTAINER_ID
 import json
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.helpers import escape_markdown  # newly added import
 
 logger = logging.getLogger("Mafia Bot PasscodeHandler")
 
@@ -146,9 +147,11 @@ async def save_template_as_pending(update: ContextTypes.DEFAULT_TYPE, context: C
     confirmation_markup = InlineKeyboardMarkup(confirmation_keyboard)
 
     try:
+        message = f"New role template pending confirmation:\n```{template_details}```"
+        safe_text = escape_markdown(message, version=2)
         await context.bot.send_message(
             chat_id=MAINTAINER_ID,
-            text=f"New role template pending confirmation:\n```{template_details}```",
+            text=safe_text,
             parse_mode='MarkdownV2',
             reply_markup=confirmation_markup
         )
