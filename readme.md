@@ -1,181 +1,192 @@
 # Mafia Game Telegram Bot
 
-Welcome to the Mafia Game Telegram Bot, a feature-rich bot designed to facilitate and manage Mafia-style games directly within Telegram. Whether you're hosting a small group or a large gathering, this bot streamlines the process of creating games, managing players, assigning roles, and ensuring fair play through robust randomness mechanisms.
+This bot enable hosting and managing Mafia games on Telegram.
+
+---
 
 ## Table of Contents
+
+- [Introduction](#introduction)
 - [Features](#features)
-- [Prerequisites](#prerequisites)
 - [Installation](#installation)
 - [Configuration](#configuration)
 - [Usage](#usage)
 - [File Structure](#file-structure)
-- [Database Schema](#database-schema)
+- [Changelog](#changelog)
+- [License](#license)
+
+---
+
+## Introduction
+
+The Mafia Game Telegram Bot is designed to simplify the process of hosting and managing Mafia-style games directly on Telegram. In this major update, we’ve reworked many functionalities, improved reliability, and added interactive features to enhance your gaming experience.
+
+---
 
 ## Features
-- Create and Manage Games: Easily create new Mafia games with unique passcodes and manage existing games.
-- Join Games: Players can join games using a passcode, ensuring only invited participants can join.
-- Role Assignment: Assign roles to players using either the Random.org API for true randomness or a local fallback method.
-- Interactive Role Management: Use Telegram's inline buttons to set, adjust, and confirm roles within the game.
-- Secure and Concurrent Database Handling: Utilizes SQLite with Write-Ahead Logging (WAL) for efficient and safe concurrent operations.
-- Comprehensive Logging: Detailed logs to monitor bot activities and troubleshoot issues.
 
-## Prerequisites
-Before setting up the Mafia Game Telegram Bot, ensure you have the following:
+- **Game Creation & Joining:**
+  - Create a new game with a unique passcode.
+  - Join existing games securely via passcode verification.
+  
+- **Interactive Role Management:**
+  - Set roles with intuitive inline buttons.
+  - Automatically assign roles using the Random.org API for true randomness with a local fallback.
+  - Save and manage role templates (with maintainer confirmation) for recurring game setups.
+  
+- **Player Management:**
+  - Eliminate or revive players during the game.
+  - Real-time updates to player statuses in the database.
+  
+- **Advanced Voting System:**
+  - Engage in both regular and anonymous voting sessions.
+  - Toggle voting permissions: control who can vote and be voted.
+  - Receive detailed voting summaries and a comprehensive, real-time voting report.
+  
+- **Inquiry & Reporting:**
+  - Generate faction summaries and detailed inquiry reports.
+  - Receive individual role and game status notifications.
+  
+- **Robust Database & Logging:**
+  - Uses SQLite with Write-Ahead Logging (WAL) for efficient concurrent access.
+  - Automatic migrations and schema updates.
+  - Comprehensive logging throughout the system for easy troubleshooting.
 
-- Python 3.12 or higher: The bot is built using Python. You can download it from [python.org](https://www.python.org/).
-- Telegram Bot Token: Obtain a token by creating a new bot via BotFather on Telegram.
-- Random.org API Key: Sign up for an API key at [Random.org](https://www.random.org/).
+---
 
 ## Installation
 
-1. Clone the repository and navigate to it.
+1. **Clone the Repository:**
+
    ```bash
-   git clone https://github.com/the-mahdi/Mafia_bot.git
-   cd project_location 
+   git clone https://github.com/the-mahdi/Mafia_bot
+   cd Mafia_bot
    ```
 
-2. Create a Virtual Environment (Optional but Recommended)
+2. **Set Up a Virtual Environment (Recommended):**
+
    ```bash
    python3 -m venv venv
-   source venv/bin/activate  # On Windows, use venv\Scripts\activate
+   source venv/bin/activate    # On Windows, use: venv\Scripts\activate
    ```
 
-3. Install Dependencies
-   Ensure you have pip installed. Then run:
+3. **Install Dependencies:**
+
    ```bash
    pip install -r requirements.txt
    ```
 
+4. **Docker Deployment (Optional):**
+   - Use the provided `docker-compose.yml` and `dockerfile` for containerized deployment:
+     ```bash
+     docker-compose up --build
+     ```
+
+---
+
 ## Configuration
 
-### 1. Setting Up token.txt
-Create a file named `token.txt` in the root directory of the project with the following structure:
+1. **Tokens & API Keys:**
+   - Create a `token.txt` file inside the `data` directory with the following three lines:
+     ```
+     YOUR_TELEGRAM_BOT_TOKEN
+     YOUR_RANDOM_ORG_API_KEY
+     YOUR_MAINTAINER_TELEGRAM_ID
+     ```
+   - These tokens are used for authenticating your bot, accessing the Random.org API for randomness, and managing role template confirmations.
 
-```
-YOUR_TELEGRAM_BOT_TOKEN
-YOUR_RANDOM_ORG_API_KEY
-```
+2. **Roles & Templates:**
+   - Define available roles and their descriptions in `data/roles.json`.
+   - Role templates can be saved in `data/role_templates.json` and will require maintainer confirmation before becoming active.
 
-- First Line: Your Telegram Bot Token obtained from BotFather.
-- Second Line: Your Random.org API Key.
+3. **Database:**
+   - The bot uses an SQLite database (`db/mafia_game.db`) which is created and updated automatically on the first run.
 
-Example:
-```
-123456789:ABCDEFGHIJKLMNOPQRSTUVWXYZ
-abcdef12-3456-7890-abcd-ef1234567890
-```
-
-### 2. Defining Roles
-
-#### a. list_roles.txt
-List all the roles available in your Mafia game, one per line.
-
-Example:
-```
-ShahrSaD
-Doctor
-```
-
-#### b. role_descriptions.txt
-Provide descriptions for each role in the following format:
-
-```
-RoleName: Description of the role.
-```
-
-Example:
-```
-ShahrSaD: The "Shahr Sade" is a simple citizen ...
-Doctor: The Doctor has the ability to save one person each night from ...
-
-```
-
-Ensure that every role listed in `list_roles.txt` has a corresponding description in `role_descriptions.txt`. If a description is missing, the bot will assign a default message indicating that no description is available.
-
-### 3. Database Setup
-The bot uses SQLite for data storage. Upon first run, it will automatically create a `mafia_game.db` file with the necessary tables:
-
-- Users: Stores user information.
-- Games: Stores game details.
-- Roles: Assigns roles to users within a game.
-- GameRoles: Manages the count of each role within a game.
+---
 
 ## Usage
 
-1. Start the Bot
-   Run the bot using:
-   ```bash
-   python mafia_bot.py
-   ```
+1. **Starting the Bot:**
+   - Run the bot using:
+     ```bash
+     python main.py
+     ```
+   - Alternatively, deploy with Docker as described above.
 
-2. Interact with the Bot on Telegram
-   - `/start`: Begin interacting with the bot. You'll be presented with options to create or join a game.
-   - Create Game: Generates a unique passcode for a new game. Share this passcode with players you want to join.
-   - Join Game: Enter the passcode to join an existing game.
-   - Set Roles: As a moderator, set the number of each role available in the game using interactive buttons.
-   - Start Game: Once all roles are set and players have joined, start the game. Players will receive their assigned roles via private messages.
+2. **Interacting with the Bot:**
+   - Use the `/start` command to begin.
+   - **Game Options:**
+     - **Create Game:** Generates a unique passcode to start a new game.
+     - **Join Game:** Enter a passcode to join an existing game.
+     - **Set Roles / Select Template:** Use inline buttons to adjust role counts and apply role templates.
+     - **Manage Games:** Access functionalities for eliminating/reviving players, starting games, and configuring voting sessions.
+   - **Voting & Inquiry:**
+     - Participate in interactive voting sessions with both public and anonymous modes.
+     - Receive detailed voting summaries and inquiry reports on faction and role distributions.
 
-3. Role Assignment
-   The bot attempts to use the Random.org API to shuffle and assign roles for true randomness. If the API call fails, it falls back to Python's local random module to ensure continuity.
-
-4. Logging
-   The bot logs its activities to the console.
+---
 
 ## File Structure
-```
-mafia-game-telegram-bot/
-│
-├── list_roles.txt           # List of available roles, one per line.
-├── role_descriptions.txt    # Descriptions for each role in "Role: Description" format.
-├── requirements.txt         # Python dependencies.
-├── token.txt                # Telegram and Random.org API tokens (see Configuration).
-├── mafia_game.db            # SQLite database (auto-generated on first run).
-└── mafia_bot.py             # Main Python script for the bot.
-```
-
-### requirements.txt
-Ensure all necessary Python packages are installed. Below is an example of what your `requirements.txt` might include:
 
 ```
-aiohappyeyeballs==2.4.3
-aiohttp==3.10.9
-aiosignal==1.3.1
+Mafia_bot/
+├── docker-compose.yml
+├── dockerfile
+├── LICENSE.txt
+├── main.py
+├── readme.md
+├── requirements.txt
+├── data/
+│   ├── token.txt
+│   ├── roles.json
+│   └── role_templates.json
+├── db/
+│   └── mafia_game.db      # Auto-generated on first run
+└── src/
+    ├── config.py
+    ├── db.py
+    ├── roles.py
+    ├── utils.py
+    ├── handlers/
+    │   ├── start_handler.py
+    │   ├── passcode_handler.py
+    │   ├── button_handler.py
+    │   └── game_management/
+    │       ├── base.py
+    │       ├── create_game.py
+    │       ├── join_game.py
+    │       ├── start_game.py
+    │       ├── roles_setup.py
+    │       ├── player_management.py
+    │       ├── voting.py
+    │       └── inquiry.py
+    └── __init__.py
 ```
 
+---
 
-## Database Schema
-The bot uses SQLite with the following tables:
+## Changelog
 
-### Users
-| Column       | Type      | Description                           |
-|--------------|-----------|---------------------------------------|
-| user_id      | INTEGER   | Primary key (Telegram user ID).       |
-| username     | TEXT      | Telegram username.                    |
-| last_updated | TIMESTAMP | Timestamp of the last update.         |
+- **Role Assignment Enhancements:**
+  - Integrated Random.org API to improve role assignment randomness.
+  - Added local fallback using Python’s built-in random module.
+- **Interactive UI Upgrades:**
+  - Redesigned inline keyboard interfaces for setting roles, managing games, and voting.
+- **Advanced Voting System:**
+  - Introduced anonymous voting mode.
+  - Implemented voting permissions to control who can vote and be voted.
+  - Detailed voting summaries and a full voting report now available.
+- **Player Management Improvements:**
+  - Added functionalities for eliminating and reviving players mid-game.
+  - Implemented maintainer confirmation for new role templates.
+- **Database & Logging:**
+  - Enhanced database schema with automatic migration and WAL mode.
+  - Improved logging across modules for better debugging and monitoring.
 
-### Games
-| Column            | Type    | Description                                               |
-|-------------------|---------|-----------------------------------------------------------|
-| game_id           | INTEGER | Primary key (Auto-incremented).                           |
-| passcode          | TEXT    | Unique passcode for the game.                             |
-| moderator_id      | INTEGER | User ID of the game moderator.                            |
-| started           | INTEGER | Flag indicating if the game has started (0 or 1).         |
-| randomness_method | TEXT    | Method used for randomness ("Random.org" or fallback).    |
+---
 
-### Roles
-| Column  | Type    | Description                                     |
-|---------|---------|--------------------------------------------------|
-| game_id | INTEGER | Foreign key referencing Games(game_id).          |
-| user_id | INTEGER | Foreign key referencing Users(user_id).          |
-| role    | TEXT    | Assigned role to the user in the game.           |
+## License
 
-Primary Key: (game_id, user_id)
+This project is licensed under the [MIT License](LICENSE.txt).
 
-### GameRoles
-| Column  | Type    | Description                                     |
-|---------|---------|--------------------------------------------------|
-| game_id | INTEGER | Foreign key referencing Games(game_id).          |
-| role    | TEXT    | Role name.                                       |
-| count   | INTEGER | Number of players assigned to this role.         |
-
-Primary Key: (game_id, role)
+---
