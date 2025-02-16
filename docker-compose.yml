@@ -1,0 +1,10 @@
+services:
+  mafia-bot:
+    build: .
+    container_name: mafia_bot
+    
+    restart: always
+    
+    volumes:
+      - ./db:/app/db
+      - ./logs:/app/logs

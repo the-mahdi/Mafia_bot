@@ -1,25 +1,45 @@
 aiohappyeyeballs==2.4.3
 aiohttp==3.10.9
 aiosignal==1.3.1
-anyio @ file:///home/conda/feedstock_root/build_artifacts/anyio_1708355285029/work
+altgraph==0.17.4
+anyio==4.3.0
+astroid==3.3.6
 attrs==24.2.0
-certifi @ file:///home/conda/feedstock_root/build_artifacts/certifi_1707022139797/work/certifi
+beautifulsoup4==4.12.3
+bs4==0.0.2
+certifi==2024.8.30
 charset-normalizer==3.3.2
-exceptiongroup @ file:///home/conda/feedstock_root/build_artifacts/exceptiongroup_1704921103267/work
+colorama==0.4.6
+dill==0.3.9
+exceptiongroup==1.2.0
 frozenlist==1.4.1
-h11 @ file:///home/conda/feedstock_root/build_artifacts/h11_1664132893548/work
-h2 @ file:///home/conda/feedstock_root/build_artifacts/h2_1634280454336/work
+h11==0.14.0
+h2==4.1.0
 hpack==4.0.0
-httpcore @ file:///home/conda/feedstock_root/build_artifacts/httpcore_1711596990900/work
-httpx @ file:///home/conda/feedstock_root/build_artifacts/httpx_1708530890843/work
-hyperframe @ file:///home/conda/feedstock_root/build_artifacts/hyperframe_1619110129307/work
-idna @ file:///home/conda/feedstock_root/build_artifacts/idna_1713279365350/work
+httpcore==1.0.4
+hyperframe==6.0.1
+idna==3.4
+iniconfig==2.0.0
+isort==5.13.2
+mccabe==0.7.0
 multidict==6.1.0
-python-telegram-bot @ file:///home/conda/feedstock_root/build_artifacts/python-telegram-bot_1713244499671/work
+packaging==24.1
+pefile==2024.8.26
+platformdirs==4.3.6
+pluggy==1.5.0
+pyinstaller==6.10.0
+pyinstaller-hooks-contrib==2024.8
+pylint==3.3.2
+pytest==8.3.4
+pytest-mock==3.14.0
+pywin32-ctypes==0.2.3
 requests==2.32.3
 setuptools==69.5.1
-sniffio @ file:///home/conda/feedstock_root/build_artifacts/sniffio_1708952932303/work
-typing_extensions @ file:///home/conda/feedstock_root/build_artifacts/typing_extensions_1712329955671/work
+sniffio==1.3.1
+soupsieve==2.6
+tomlkit==0.13.2
+typing_extensions==4.10.0
 urllib3==2.2.3
 wheel==0.43.0
 yarl==1.13.1
+python-telegram-bot==21.10
