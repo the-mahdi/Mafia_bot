@@ -5,12 +5,17 @@ import uuid
 from src.db import conn, cursor
 from src.roles import available_roles
 from telegram.helpers import escape_markdown
+from src.utils import clear_user_data
 
 logger = logging.getLogger("Mafia Bot GameManagement.CreateGame")
 
 async def create_game(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE) -> None:
     logger.debug("Creating a new game.")
     user_id = update.effective_user.id
+    
+    # Clear user data but keep username before creating a new game
+    clear_user_data(context)
+    
     max_attempts = 10  # Set a maximum number of attempts to prevent infinite loops
     attempts = 0
 

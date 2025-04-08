@@ -19,6 +19,7 @@
       "Doctor": {
         "faction": "Villager",
         "description": "The Doctor has the ability to save one person each night from being killed. They can choose to heal themselves or another player, effectively protecting them from an assassination attempt. The Doctor's role is crucial in maintaining balance and keeping the town's key players alive.",
+        "win_condition": "faction",
         "actions": {
           "night": [
             {
@@ -27,7 +28,10 @@
               "targets": 1,
               "command": "heal",
               "interactive": "button",
-              "self_target": true
+              "self_target": true,
+              "priority": 8,
+              "target_filter": "alive",
+              "effect": "Prevents target from being killed by Mafia/Sniper this night."
             }
           ],
           "day": [
@@ -2242,4 +2246,3 @@
       }
     }
   }
-  

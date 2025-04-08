@@ -1,7 +1,7 @@
 from telegram import InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import CommandHandler, ContextTypes
 import logging
-from src.utils import clear_user_data
+from src.utils.context import clear_user_data
 
 logger = logging.getLogger("Mafia Bot StartHandler")
 

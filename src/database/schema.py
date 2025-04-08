@@ -1,18 +1,10 @@
-import sqlite3
-from src.utils.path import resource_path
-import os
 import logging
+from src.database.connection import conn, cursor
 
 logger = logging.getLogger("Mafia Bot DB")
 
-conn = sqlite3.connect(resource_path(os.path.join('db', 'mafia_game.db')), check_same_thread=False)
-cursor = conn.cursor()
-
 def initialize_database():
     logger.debug("Initializing the database and creating tables if they don't exist.")
-
-    # Enable WAL mode for better concurrency
-    conn.execute("PRAGMA journal_mode=WAL;")
 
     # Create Users table
     cursor.execute('''
@@ -53,7 +45,7 @@ def initialize_database():
         cursor.execute("ALTER TABLE Games_new RENAME TO Games")
         logger.debug("Games table migrated with current_phase column.")
     else:
-        # Create Games table with current_phase if it doesn’t exist
+        # Create Games table with current_phase if it doesn't exist
         cursor.execute('''
         CREATE TABLE IF NOT EXISTS Games (
             game_id TEXT PRIMARY KEY,

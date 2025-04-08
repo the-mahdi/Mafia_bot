@@ -1,6 +1,7 @@
 from telegram.ext import ContextTypes
 import logging
 from src.db import conn, cursor
+from src.utils import clear_user_data
 
 logger = logging.getLogger("Mafia Bot GameManagement.JoinGame")
 
@@ -8,6 +9,10 @@ async def join_game(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEF
     logger.debug("User attempting to join a game.")
     user_id = update.effective_user.id
     username = context.user_data.get("username", f"User{user_id}")
+    
+    # Clear user data but keep username before joining a new game
+    clear_user_data(context)
+    context.user_data["username"] = username
 
     cursor.execute("SELECT game_id, moderator_id, started FROM Games WHERE passcode = ?", (passcode,))
     result = cursor.fetchone()

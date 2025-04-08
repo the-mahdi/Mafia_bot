@@ -6,11 +6,12 @@ import uuid
 import asyncio
 import random
 import aiohttp
-from src.db import conn, cursor
-from src.roles import available_roles, role_descriptions, role_templates, role_factions
+# TODO: Update these imports when the respective refactoring tasks are completed
+from src.db import conn, cursor  # Will be updated to src.database.connection
+from src.roles import available_roles, role_descriptions, role_templates, role_factions  # Will be updated to src.game.roles.role_manager
 from src.utils.path import resource_path
-from src.utils import generate_voting_summary  
-from src.config import RANDOM_ORG_API_KEY
+from src.utils import generate_voting_summary  # Will be updated to src.utils.formatting
+from src.config import RANDOM_ORG_API_KEY  # Will be updated to src.core.config
 import json
 
 logger = logging.getLogger("Mafia Bot GameManagement")

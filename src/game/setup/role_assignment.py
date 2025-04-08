@@ -1,77 +1,23 @@
-from telegram.ext import MessageHandler, filters, ContextTypes
 import logging
+import json
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.helpers import escape_markdown
+from telegram.ext import ContextTypes
 
-from src.handlers.game_management.base import get_player_count
-from src.handlers.game_management.join_game import join_game
-from src.handlers.game_management.start_game import start_game
-from src.roles import role_templates, pending_templates, save_role_templates
 from src.database.connection import conn, cursor
 from src.config import MAINTAINER_ID
-import json
+from src.game.utils import get_player_count
 
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.helpers import escape_markdown  # newly added import
+# Import the role templates - this will need to be updated later when roles.py is refactored
+from src.game.roles.role_manager import role_templates, pending_templates, save_role_templates
 
-logger = logging.getLogger("Mafia Bot PasscodeHandler")
-
-async def handle_passcode(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE) -> None:
-    logger.debug("Handling a text message.")
-    user_input = update.message.text.strip()
-    action = context.user_data.get("action")
-    user_id = update.effective_user.id
-
-    if action == "awaiting_name":
-        # Handle name setting
-        cursor.execute("SELECT username FROM Users WHERE user_id = ?", (user_id,))
-        result = cursor.fetchone()
-        if result:
-            # Update the user's name if it's different
-            if result[0] != user_input:
-                cursor.execute("UPDATE Users SET username = ? WHERE user_id = ?", (user_input, user_id))
-                conn.commit()
-                context.user_data["username"] = user_input
-            else:
-                # Name is the same, no update needed
-                context.user_data["username"] = user_input
-        else:
-            # Insert new user into the database
-            cursor.execute("INSERT INTO Users (user_id, username) VALUES (?, ?)", (user_id, user_input))
-            conn.commit()
-            context.user_data["username"] = user_input
-        context.user_data["action"] = "join_game"  # Now expecting a passcode
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="Please enter the passcode to join the game.")
-
-    elif action == "existing_user":
-        # Check if the input is a name or a passcode
-        if is_valid_passcode(user_input):
-            context.user_data["action"] = "join_game"
-            await join_game(update, context, user_input)
-        else:
-            # Update the user's name in the database
-            cursor.execute("UPDATE Users SET username = ? WHERE user_id = ?", (user_input, user_id))
-            conn.commit()
-            context.user_data["username"] = user_input
-            context.user_data["action"] = "join_game"
-            await context.bot.send_message(chat_id=update.effective_chat.id, text="Name updated. Please enter the passcode to join the game.")
-
-    elif action == "join_game":
-        await join_game(update, context, user_input)  # Pass user_input as the passcode
-
-    elif action == "set_roles":
-        # In the revised flow, roles are set via buttons, so passcode is not needed here
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="Please use the role buttons to set roles.")
-
-    elif action == "start_game":
-        await start_game(update, context, user_input)
-
-    elif action == "awaiting_template_name_confirmation":
-        # Handle the input as template name and save as pending
-        await handle_template_confirmation(update, context, user_input)
-
-    else:
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="Unknown action. Please use /start to begin.")
+logger = logging.getLogger("Mafia Bot RoleAssignment")
 
 async def handle_template_confirmation(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE, template_name: str) -> None:
+    """
+    Handle the confirmation of a new role template name.
+    Gets the current roles from the game and prepares them to be saved as a template.
+    """
     logger.debug("Handling template confirmation.")
     game_id = context.user_data.get('game_id')
 
@@ -91,6 +37,10 @@ async def handle_template_confirmation(update: ContextTypes.DEFAULT_TYPE, contex
     await save_template_as_pending(update, context, template_name)
 
 async def save_template_as_pending(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE, template_name: str) -> None:
+    """
+    Save a role template as pending confirmation by the maintainer.
+    Creates and stores the template, then sends a confirmation request to the maintainer.
+    """
     logger.debug("Saving template as pending.")
     game_id = context.user_data.get('game_id')
     player_count = context.user_data.get("player_count")  # Get from context
@@ -165,12 +115,3 @@ async def save_template_as_pending(update: ContextTypes.DEFAULT_TYPE, context: C
     context.user_data['roles_for_template'] = None
     context.user_data['player_count'] = None
     context.user_data['action'] = None
-
-def is_valid_passcode(text):
-    # Basic check for a UUID-like format
-    import re
-    pattern = re.compile(r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$')
-    return bool(pattern.match(text))
-
-# Create the handler instance
-passcode_handler = MessageHandler(filters.TEXT & ~filters.COMMAND, handle_passcode)

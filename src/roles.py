@@ -1,5 +1,5 @@
 import json
-from src.utils import resource_path
+from src.utils.path import resource_path
 import logging
 import os
 

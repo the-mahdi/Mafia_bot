@@ -11,6 +11,23 @@ def resource_path(relative_path):
 
     return os.path.join(base_path, relative_path)
 
+def clear_user_data(context, keep_username=True):
+    """
+    Clears user data stored in context.user_data to prevent stale state.
+    
+    :param context: The context object containing user_data
+    :param keep_username: Whether to keep the username in user_data (default: True)
+    """
+    # Store username if we want to keep it
+    username = context.user_data.get("username") if keep_username else None
+    
+    # Clear all user data
+    context.user_data.clear()
+    
+    # Restore username if needed
+    if keep_username and username:
+        context.user_data["username"] = username
+
 def generate_voting_summary(voted_players, not_voted_players):
     """
     Generates a formatted voting summary message with emojis.

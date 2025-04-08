@@ -3,6 +3,7 @@ from telegram.ext import CallbackQueryHandler, ContextTypes
 import logging
 from src.db import conn, cursor
 from src.roles import available_roles, role_descriptions, role_templates, pending_templates, save_role_templates
+from src.utils import clear_user_data
 
 from src.handlers.game_management import (get_random_shuffle, get_player_count, get_templates_for_player_count,
                                           create_game, join_game, eliminate_player, handle_elimination_confirmation,
@@ -37,8 +38,104 @@ async def handle_button(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes
     # Retrieve game_id from user_data
     game_id = context.user_data.get('game_id')
 
+    # Handle double kill callbacks for Mashoghe's death effect
+    if data.startswith("double_kill_first_") and "_" in data:
+        parts = data.split("_")
+        if len(parts) >= 4:
+            first_target_id = int(parts[3])
+            game_id = parts[4]
+            logger.debug(f"Godfather selected first kill target: {first_target_id} in game {game_id}")
+            
+            # Store the first target in user_data
+            if 'double_kill_targets' not in context.user_data:
+                context.user_data['double_kill_targets'] = {}
+            context.user_data['double_kill_targets']['first'] = first_target_id
+            
+            # Fetch remaining players for second target
+            cursor.execute("""
+                SELECT r.user_id, u.username 
+                FROM Roles r 
+                JOIN Users u ON r.user_id = u.user_id 
+                WHERE r.game_id = ? AND r.eliminated = 0 AND r.user_id != ? AND r.user_id != ?
+            """, (game_id, user_id, first_target_id))
+            
+            potential_targets = cursor.fetchall()
+            
+            # Create a button grid for the second kill target
+            keyboard = []
+            for target_id, target_name in potential_targets:
+                keyboard.append([InlineKeyboardButton(
+                    f"{target_name}", 
+                    callback_data=f"double_kill_second_{target_id}_{game_id}"
+                )])
+            
+            keyboard.append([InlineKeyboardButton("Pass", callback_data=f"pass_{game_id}")])
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
+            await context.bot.send_message(
+                chat_id=user_id,
+                text="Now select your SECOND kill target:",
+                reply_markup=reply_markup
+            )
+            return
+            
+    elif data.startswith("double_kill_second_") and "_" in data:
+        parts = data.split("_")
+        if len(parts) >= 4:
+            second_target_id = int(parts[3])
+            game_id = parts[4]
+            logger.debug(f"Godfather selected second kill target: {second_target_id} in game {game_id}")
+            
+            # Get the first target from user_data
+            first_target_id = context.user_data.get('double_kill_targets', {}).get('first')
+            
+            if first_target_id:
+                # Record both kill actions
+                try:
+                    cursor.execute("BEGIN TRANSACTION")
+                    # Record first kill
+                    cursor.execute(
+                        "INSERT OR REPLACE INTO Actions (game_id, user_id, phase, action, target_id) VALUES (?, ?, ?, ?, ?)",
+                        (game_id, user_id, "NIGHT", "kill", first_target_id)
+                    )
+                    
+                    # Record second kill with a special action to differentiate it
+                    cursor.execute(
+                        "INSERT OR REPLACE INTO Actions (game_id, user_id, phase, action, target_id) VALUES (?, ?, ?, ?, ?)",
+                        (game_id, user_id, "NIGHT", "kill", second_target_id)
+                    )
+                    
+                    cursor.execute("COMMIT")
+                    logger.debug(f"Recorded double kill targets: {first_target_id} and {second_target_id}")
+                    
+                    # Clean up user_data
+                    if 'double_kill_targets' in context.user_data:
+                        del context.user_data['double_kill_targets']
+                    if 'double_kill_night' in context.user_data:
+                        del context.user_data['double_kill_night']
+                    
+                    await context.bot.send_message(
+                        chat_id=user_id,
+                        text=f"You have selected your targets for the night. Your fury will be unleashed!"
+                    )
+                except Exception as e:
+                    cursor.execute("ROLLBACK")
+                    logger.error(f"Error recording double kill: {e}")
+                    await context.bot.send_message(
+                        chat_id=user_id,
+                        text="There was an error recording your targets. Please try again or contact the moderator."
+                    )
+            else:
+                await context.bot.send_message(
+                    chat_id=user_id,
+                    text="Error: First target not found. Please try again or contact the moderator."
+                )
+            return
+
     if data == "back_to_menu":
         logger.debug("back_to_menu button pressed.")
+        # Clean up user data before returning to the main menu (keeps username)
+        clear_user_data(context)
         await start(update, context)
 
     elif data == "prev_page":
