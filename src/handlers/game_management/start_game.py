@@ -2,7 +2,8 @@ from telegram.ext import ContextTypes
 import logging
 from src.db import conn, cursor
 from src.roles import role_descriptions, role_factions
-from telegram.helpers import escape_markdown  # Newly added import
+from telegram.helpers import escape_markdown
+from src.handlers.game_management.phase_manager import start_night_phase
 
 logger = logging.getLogger("Mafia Bot GameManagement.StartGame")
 
@@ -123,6 +124,7 @@ async def start_game(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DE
         text=f"The game has started! Roles, descriptions, and randomness methodology have been sent to all players. Method used: {randomness_method}"
     )
     logger.debug(f"Game {game_id} started using {randomness_method}")
+    await start_night_phase(update, context, game_id)
 
 async def start_latest_game(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE) -> None:
     logger.debug("Starting the latest game created by the moderator.")
@@ -151,22 +153,6 @@ async def start_latest_game(update: ContextTypes.DEFAULT_TYPE, context: ContextT
     # Store game_id in context.user_data
     context.user_data['game_id'] = game_id
 
-    # ------------------- Commented Out Section -------------------
-    # Previously, confirm_and_set_roles was called here, which sends the game summary.
-    # Since roles should be confirmed manually, we remove this call.
-
-    # success, method = await confirm_and_set_roles(update, context, game_id)
-    # if not success:
-    #     await context.bot.send_message(chat_id=update.effective_chat.id, text="Error setting roles. Please try again.")
-    # else:
-    #     await start_game(update, context)  # Call start_game without passcode
-    #     await context.bot.send_message(
-    #         chat_id=update.effective_chat.id,
-    #         text=f"The game has started successfully!\nRandomness source: {method}."
-    #     )
-    # -------------------------------------------------------------
-
-    # Instead, directly start the game assuming roles have already been set
     await start_game(update, context)
     await context.bot.send_message(
         chat_id=update.effective_chat.id,

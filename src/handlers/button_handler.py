@@ -438,6 +438,49 @@ async def handle_button(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes
             return
         await send_detailed_inquiry_summary(update, context, game_id)
 
+
+    # Handle action prompts
+    elif data.endswith(f"_prompt_{game_id}"):
+        action_command = data.split("_prompt_")[0]
+        cursor.execute("SELECT role, eliminated FROM Roles WHERE game_id = ? AND user_id = ?", (game_id, user_id))
+        result = cursor.fetchone()
+        if not result or result[1] == 1:
+            await context.bot.send_message(chat_id=user_id, text="You cannot perform actions.")
+            return
+        role = result[0]
+        
+        # Get current phase
+        cursor.execute("SELECT current_phase FROM Games WHERE game_id = ?", (game_id,))
+        phase = cursor.fetchone()[0]
+        actions = role_actions.get(role, {}).get(phase, [])
+        action = next((a for a in actions if a['command'] == action_command), None)
+        
+        if not action:
+            await context.bot.send_message(chat_id=user_id, text="Invalid action.")
+            return
+        
+        if action.get('targets', 0) == 0:
+            await perform_action(update, context, game_id, user_id, action_command, None)
+        else:
+            # Show target selection
+            cursor.execute("SELECT user_id, username FROM Users JOIN Roles ON Users.user_id = Roles.user_id WHERE game_id = ? AND eliminated = 0", (game_id,))
+            players = cursor.fetchall()
+            keyboard = [
+                [InlineKeyboardButton(username, callback_data=f"{action_command}_{target_id}_{game_id}")]
+                for target_id, username in players if action.get('self_target', False) or target_id != user_id
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            await context.bot.send_message(
+                chat_id=user_id,
+                text=f"Select a target for {action['name']}:",
+                reply_markup=reply_markup
+            )
+    
+    # Handle action with target
+    elif data.count("_") >= 2 and data.split("_")[-1] == game_id:
+        action_command, target_id = data.split("_")[:2]
+        await perform_action(update, context, game_id, user_id, action_command, int(target_id))
+
     else:
         await context.bot.send_message(chat_id=update.effective_chat.id, text="Unknown action.")
 
@@ -498,6 +541,29 @@ async def handle_maintainer_confirmation(update: ContextTypes.DEFAULT_TYPE, cont
 
     # Save the updated templates
     save_role_templates(role_templates, pending_templates)
+
+async def perform_action(update: ContextTypes.DEFAULT_TYPE, context: ContextTypes.DEFAULT_TYPE, game_id: str, user_id: int, action_command: str, target_id: int):
+    """Record the player's action in the Actions table."""
+    cursor.execute("SELECT role FROM Roles WHERE game_id = ? AND user_id = ?", (game_id, user_id))
+    role = cursor.fetchone()[0]
+    phase = cursor.execute("SELECT current_phase FROM Games WHERE game_id = ?", (game_id,)).fetchone()[0]
+    
+    actions = role_actions.get(role, {}).get(phase, [])
+    action = next((a for a in actions if a['command'] == action_command), None)
+    
+    if not action:
+        await context.bot.send_message(chat_id=user_id, text="Invalid action.")
+        return
+    
+    # Record action
+    cursor.execute(
+        "INSERT OR REPLACE INTO Actions (game_id, user_id, phase, action, target_id) VALUES (?, ?, ?, ?, ?)",
+        (game_id, user_id, phase, action_command, target_id)
+    )
+    conn.commit()
+    
+    target_text = f"User {target_id}" if target_id else "no target"
+    await context.bot.send_message(chat_id=user_id, text=f"You chose to {action['name']} {target_text}.")
 
 # Create the handler instance
 button_handler = CallbackQueryHandler(handle_button)
