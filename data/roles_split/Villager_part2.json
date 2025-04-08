@@ -1,0 +1,359 @@
+{
+    "roles": {
+      "Bisim chi": {
+        "faction": "Villager",
+        "description": "The \"Bisim Chi,\" or Radio Operator, can distribute a Bisim or Walkie-Talkie to two people. If both are citizens, the coordinator will wake them up so they can know each other.",
+        "win_condition": "faction",
+        "passive_abilities": [],
+        "interaction_rules": {},
+        "actions": {
+          "night": [
+            {
+              "name": "Distribute Radio",
+              "command": "distribute_radio",
+              "description": "Distribute a Bisim or Walkie-Talkie to two players.",
+              "priority": 5,
+              "targets": 2,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Distributes a communication device linking two players. See src/game/actions/distribute_radio.py"
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "command": "vote",
+              "description": "Vote to eliminate a player during the day.",
+              "priority": 1,
+              "targets": 1,
+              "target_filter": "alive, not_self",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Registers a vote for elimination."
+            }
+          ]
+        }
+      },
+      "Hacker": {
+        "faction": "Villager",
+        "description": "The Hacker will choose two people on the first night. If one of them is Mafia, the coordinator will publicly announce that the chosen list is dangerous. If two citizens or two Mafia are chosen, the announcement will not be dangerous.",
+        "win_condition": "faction",
+        "passive_abilities": [],
+        "interaction_rules": {},
+        "actions": {
+          "night": [
+            {
+              "name": "Hack",
+              "command": "hack",
+              "description": "Choose two players on the first night to determine if the chosen list is dangerous.",
+              "priority": 7,
+              "targets": 2,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Analyzes the selected targets and triggers a public announcement if one is Mafia. See src/game/actions/hack.py"
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "command": "vote",
+              "description": "Vote to eliminate a player during the day.",
+              "priority": 1,
+              "targets": 1,
+              "target_filter": "alive, not_self",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Registers a vote for elimination."
+            }
+          ]
+        }
+      },
+      "Efsha Gar": {
+        "faction": "Villager",
+        "description": "The \"Efsha Gar,\" or Revealer, can choose 1 player on two separate nights (2 overall). The chosen players' roles will be revealed if they leave the game.",
+        "win_condition": "faction",
+        "passive_abilities": [],
+        "interaction_rules": {},
+        "actions": {
+          "night": [
+            {
+              "name": "Reveal Role",
+              "command": "reveal_role",
+              "description": "Choose one player on a night; if they leave the game, their role is revealed.",
+              "priority": 6,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Marks the target for role reveal upon exit. See src/game/actions/reveal_role.py",
+              "uses": 2
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "command": "vote",
+              "description": "Vote to eliminate a player during the day.",
+              "priority": 1,
+              "targets": 1,
+              "target_filter": "alive, not_self",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Registers a vote for elimination."
+            }
+          ]
+        }
+      },
+      "Afyun": {
+        "faction": "Villager",
+        "description": "The \"Afyun,\" or Opium Dealer, can neutralize the Mafia's abilities for one night. However, they will leave the game after taking this action.",
+        "win_condition": "faction",
+        "passive_abilities": [],
+        "interaction_rules": {},
+        "actions": {
+          "night": [
+            {
+              "name": "Neutralize Mafia",
+              "command": "neutralize_mafia",
+              "description": "Neutralize the Mafia's abilities for one night, then leave the game.",
+              "priority": 9,
+              "targets": 0,
+              "target_filter": "none",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Disables all mafia actions for the night. See src/game/actions/neutralize_mafia.py"
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "command": "vote",
+              "description": "Vote to eliminate a player during the day.",
+              "priority": 1,
+              "targets": 1,
+              "target_filter": "alive, not_self",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Registers a vote for elimination."
+            }
+          ]
+        }
+      },
+      "Gor Kan": {
+        "faction": "Villager",
+        "description": "The \"Gor Kan,\" or Gravedigger, can request an announcement from the coordinator. The next day, the coordinator will announce the roles of the players who have left the game.",
+        "win_condition": "faction",
+        "passive_abilities": [],
+        "interaction_rules": {},
+        "actions": {
+          "night": [
+            {
+              "name": "Request Announcement",
+              "command": "request_announcement",
+              "description": "Request an announcement of the roles of players who have left the game.",
+              "priority": 4,
+              "targets": 0,
+              "target_filter": "none",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Schedules an announcement revealing the roles of deceased players. See src/game/actions/request_announcement.py"
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "command": "vote",
+              "description": "Vote to eliminate a player during the day.",
+              "priority": 1,
+              "targets": 1,
+              "target_filter": "alive, not_self",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Registers a vote for elimination."
+            }
+          ]
+        }
+      },
+      "Ghazi": {
+        "faction": "Villager",
+        "description": "The \"Ghazi,\" or Judge, can wake up once during the game and change the outcome of the election.",
+        "win_condition": "faction",
+        "passive_abilities": [],
+        "interaction_rules": {},
+        "actions": {
+          "night": [
+            {
+              "name": "Change Election Outcome",
+              "command": "change_election",
+              "description": "Wake up and change the outcome of the election once.",
+              "priority": 10,
+              "targets": 0,
+              "target_filter": "none",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Overrides the election result. See src/game/actions/change_election.py",
+              "uses": 1
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "command": "vote",
+              "description": "Vote to eliminate a player during the day.",
+              "priority": 1,
+              "targets": 1,
+              "target_filter": "alive, not_self",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Registers a vote for elimination."
+            }
+          ]
+        }
+      },
+      "Majhool": {
+        "faction": "Villager",
+        "description": "Two citizens who wake up to know each other and form a group. They should wake up each night and add a citizen to their group. If they choose a Mafia member, they all die.",
+        "win_condition": "faction",
+        "passive_abilities": [],
+        "interaction_rules": {},
+        "actions": {
+          "night": [
+            {
+              "name": "Add to Group",
+              "command": "add_group",
+              "description": "Add a citizen to your group each night; if you choose a Mafia member, your group dies.",
+              "priority": 5,
+              "targets": 1,
+              "target_filter": "alive, faction:Villager",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Attempts to add a player to your group. If a Mafia member is selected, the entire group is eliminated. See src/game/actions/add_group.py"
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "command": "vote",
+              "description": "Vote to eliminate a player during the day.",
+              "priority": 1,
+              "targets": 1,
+              "target_filter": "alive, not_self",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Registers a vote for elimination."
+            }
+          ]
+        }
+      },
+      "AdamSnowman": {
+        "faction": "Villager",
+        "description": "A citizen with one bullet. If they shoot a citizen or the mafia boss, it fails and the bullet is returned the next night.",
+        "win_condition": "faction",
+        "passive_abilities": [],
+        "interaction_rules": {},
+        "actions": {
+          "night": [
+            {
+              "name": "Shoot",
+              "command": "shoot",
+              "description": "Use your bullet to shoot a player; if you shoot a citizen or mafia boss, the shot fails.",
+              "priority": 8,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Attempts to shoot the target. If the target is a citizen or mafia boss, the shot is nullified and the bullet is returned. See src/game/actions/shoot.py",
+              "uses": 1
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "command": "vote",
+              "description": "Vote to eliminate a player during the day.",
+              "priority": 1,
+              "targets": 1,
+              "target_filter": "alive, not_self",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Registers a vote for elimination."
+            }
+          ]
+        }
+      },
+      "Gambler": {
+        "faction": "Villager",
+        "description": "Can double the ability of one citizen or one mafia member twice.",
+        "win_condition": "faction",
+        "passive_abilities": [],
+        "interaction_rules": {},
+        "actions": {
+          "night": [
+            {
+              "name": "Double Ability",
+              "command": "double_ability",
+              "description": "Double the ability of a target; can be used twice.",
+              "priority": 5,
+              "targets": 1,
+              "target_filter": "alive, not_self",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Enhances the target's ability effect, doubling its impact. See src/game/actions/double_ability.py",
+              "uses": 2
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "command": "vote",
+              "description": "Vote to eliminate a player during the day.",
+              "priority": 1,
+              "targets": 1,
+              "target_filter": "alive, not_self",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Registers a vote for elimination."
+            }
+          ]
+        }
+      },
+      "Link": {
+        "faction": "Villager",
+        "description": "At the start of the game, links two players together. If one dies, the other dies as well.",
+        "win_condition": "faction",
+        "passive_abilities": [],
+        "interaction_rules": {},
+        "actions": {
+          "night": [
+            {
+              "name": "Link",
+              "command": "link",
+              "description": "Link two players together; if one dies, the other dies as well.",
+              "priority": 7,
+              "targets": 2,
+              "target_filter": "alive, not_self",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Links two players so that the death of one results in the death of the other. See src/game/actions/link.py"
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "command": "vote",
+              "description": "Vote to eliminate a player during the day.",
+              "priority": 1,
+              "targets": 1,
+              "target_filter": "alive, not_self",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Registers a vote for elimination."
+            }
+          ]
+        }
+      }
+    }
+  }
+  

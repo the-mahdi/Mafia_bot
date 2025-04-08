@@ -1,0 +1,290 @@
+{
+    "roles": {
+      "Avenger": {
+        "faction": "Villager",
+        "description": "If they correctly guess the night's killer, the game master gives them a gun which they can use later.",
+        "actions": {
+          "night": [
+            {
+              "name": "Guess Killer",
+              "command": "guess_killer",
+              "description": "Guess the night's killer; if correct, receive a gun.",
+              "priority": 5,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "If the guessed killer is correct, the Avenger is granted a gun for later use."
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "command": "vote",
+              "description": "Vote to eliminate a player during the day.",
+              "priority": 1,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Registers a vote against a player for elimination."
+            }
+          ]
+        },
+        "passive_abilities": [],
+        "win_condition": "faction",
+        "interaction_rules": {}
+      },
+      "MunitionsExpert": {
+        "faction": "Villager",
+        "description": "Gives a weapon to a player once in the game. The recipient can use it the next day. After announcing suspicious players, they may use the weapon to shoot one player.",
+        "actions": {
+          "night": [
+            {
+              "name": "Equip and Announce",
+              "command": "equip_announce",
+              "description": "Equip a player with a weapon and announce two suspicious players.",
+              "priority": 5,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Grants the target a weapon for use the next day and announces two suspicious players.",
+              "uses": 1
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "command": "vote",
+              "description": "Vote to eliminate a player during the day.",
+              "priority": 1,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Registers a vote for elimination."
+            }
+          ]
+        },
+        "passive_abilities": [],
+        "win_condition": "faction",
+        "interaction_rules": {}
+      },
+      "Investigator": {
+        "faction": "Villager",
+        "description": "Can find out the faction of a player, but must be cautious of other roles.",
+        "actions": {
+          "night": [
+            {
+              "name": "Investigate Faction",
+              "command": "investigate_faction",
+              "description": "Determine the faction of a target player.",
+              "priority": 5,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Reveals the faction of the target player."
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "command": "vote",
+              "description": "Vote to eliminate a player during the day.",
+              "priority": 1,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Registers a vote for elimination."
+            }
+          ]
+        },
+        "passive_abilities": [],
+        "win_condition": "faction",
+        "interaction_rules": {}
+      },
+      "Executioner": {
+        "faction": "Villager",
+        "description": "If a player is executed by vote, their identity remains hidden. If the Executioner dies, their identity is revealed.",
+        "actions": {
+          "night": [],
+          "day": [
+            {
+              "name": "Vote",
+              "command": "vote",
+              "description": "Vote to eliminate a player during the day.",
+              "priority": 1,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Registers a vote for elimination."
+            }
+          ],
+          "trigger": [
+            {
+              "name": "Execute",
+              "command": "execute",
+              "description": "When a player is executed by vote, remain hidden; if you die, your identity is revealed.",
+              "priority": 9,
+              "targets": 0,
+              "target_filter": "",
+              "interactive": "passive",
+              "self_target": false,
+              "effect": "Keeps the Executioner's identity hidden during executions; reveals identity upon death."
+            }
+          ]
+        },
+        "passive_abilities": [],
+        "win_condition": "faction",
+        "interaction_rules": {}
+      },
+      "Scribe": {
+        "faction": "Villager",
+        "description": "Gives a paper and pen to a player. If that player is killed that night, they can make a will. If the Scribe reveals their role, the sultan gets two poisons that night.",
+        "actions": {
+          "night": [
+            {
+              "name": "Gift Pen",
+              "command": "gift_pen",
+              "description": "Give a paper and pen to a player for making a will if they are killed.",
+              "priority": 5,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Provides the target with a pen and paper; if killed, they can leave a will."
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "command": "vote",
+              "description": "Vote to eliminate a player during the day.",
+              "priority": 1,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Registers a vote for elimination."
+            }
+          ]
+        },
+        "passive_abilities": [],
+        "win_condition": "faction",
+        "interaction_rules": {
+          "on_reveal": "If the Scribe reveals their role, the Sultan receives two poisons that night."
+        }
+      },
+      "WiseMan": {
+        "faction": "Villager",
+        "description": "Once in the game, can save one player from entering the second round of voting.",
+        "actions": {
+          "night": [
+            {
+              "name": "Save from Voting",
+              "command": "save_voting",
+              "description": "Save one player from the second round of voting, once per game.",
+              "priority": 8,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Prevents the target from being subjected to the second round of voting.",
+              "uses": 1
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "command": "vote",
+              "description": "Vote to eliminate a player during the day.",
+              "priority": 1,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Registers a vote for elimination."
+            }
+          ]
+        },
+        "passive_abilities": [],
+        "win_condition": "faction",
+        "interaction_rules": {}
+      },
+      "NightWanderer": {
+        "faction": "Villager",
+        "description": "Can leave their tent for one night and become unreachable. Poison or weapons have no effect during that night.",
+        "actions": {
+          "night": [
+            {
+              "name": "Hide",
+              "command": "hide",
+              "description": "Leave your tent for one night; become immune to poison and weapons.",
+              "priority": 6,
+              "targets": 0,
+              "target_filter": "",
+              "interactive": "passive",
+              "self_target": true,
+              "effect": "Makes the NightWanderer unreachable for the night, immune to poison and weapons."
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "command": "vote",
+              "description": "Vote to eliminate a player during the day.",
+              "priority": 1,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Registers a vote for elimination."
+            }
+          ]
+        },
+        "passive_abilities": [],
+        "win_condition": "faction",
+        "interaction_rules": {}
+      },
+      "Ocean": {
+        "faction": "Villager",
+        "description": "Can wake two citizens so they get to know each other, but if a mafia or Zodiac is chosen, they are eliminated the next day.",
+        "actions": {
+          "night": [
+            {
+              "name": "Wake",
+              "command": "wake",
+              "description": "Wake two citizens to get to know each other; risk elimination if a mafia or Zodiac is chosen.",
+              "priority": 5,
+              "targets": 2,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Wakes two target citizens for interaction; if one is a mafia or Zodiac, Ocean is eliminated the next day."
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "command": "vote",
+              "description": "Vote to eliminate a player during the day.",
+              "priority": 1,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Registers a vote for elimination."
+            }
+          ]
+        },
+        "passive_abilities": [],
+        "win_condition": "faction",
+        "interaction_rules": {}
+      }
+    }
+  }
+  

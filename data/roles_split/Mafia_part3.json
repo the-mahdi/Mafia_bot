@@ -1,0 +1,182 @@
+{
+    "roles": {
+      "StrongMan": {
+        "faction": "Mafia",
+        "description": "Can use his kill one time with the godfather's confirmation. The targeted person will die regardless of their toughness.",
+        "win_condition": "faction",
+        "passive_abilities": [],
+        "interaction_rules": [],
+        "actions": {
+          "night": [
+            {
+              "name": "Strong Kill",
+              "command": "strong_kill",
+              "description": "Kill one player with confirmation from the godfather; the target dies regardless of toughness.",
+              "priority": 10,
+              "targets": 1,
+              "target_filter": "alive,not_self",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Immediately eliminates the target regardless of any protective abilities if confirmed by the godfather.",
+              "uses": 1
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "command": "vote",
+              "description": "Vote to eliminate a player during the day.",
+              "priority": 1,
+              "targets": 1,
+              "target_filter": "alive,not_self",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Registers a vote to eliminate the chosen player during the day."
+            }
+          ]
+        }
+      },
+      "Buyer": {
+        "faction": "Mafia",
+        "description": "Discusses with the mafia on who to buy on the first night. Then, wakes one person; if that person is a doctor, they don't wake up, otherwise they may join the mafia.",
+        "win_condition": "faction",
+        "passive_abilities": [],
+        "interaction_rules": [],
+        "actions": {
+          "night": [
+            {
+              "name": "Buy",
+              "command": "buy",
+              "description": "Discuss with the mafia and select a player; if they're not a doctor, they may join the mafia.",
+              "priority": 8,
+              "targets": 1,
+              "target_filter": "alive,not_self",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Attempts to recruit a player to the mafia; if the target is not a Doctor, they may join the mafia."
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "command": "vote",
+              "description": "Vote to eliminate a player during the day.",
+              "priority": 1,
+              "targets": 1,
+              "target_filter": "alive,not_self",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Registers a vote to eliminate the chosen player during the day."
+            }
+          ]
+        }
+      },
+      "NamelessMafia": {
+        "faction": "Mafia",
+        "description": "Once per game can take on any mafia or citizen role for 24 hours.",
+        "win_condition": "faction",
+        "passive_abilities": [],
+        "interaction_rules": [],
+        "actions": {
+          "night": [
+            {
+              "name": "Assume Role",
+              "command": "assume_role",
+              "description": "Take on any mafia or citizen role for 24 hours.",
+              "priority": 8,
+              "targets": 0,
+              "target_filter": "",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Temporarily assumes the role of any chosen mafia or citizen for 24 hours; usable once per game.",
+              "uses": 1
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "command": "vote",
+              "description": "Vote to eliminate a player during the day.",
+              "priority": 1,
+              "targets": 1,
+              "target_filter": "alive,not_self",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Registers a vote to eliminate the chosen player during the day."
+            }
+          ]
+        }
+      },
+      "Dynamite": {
+        "faction": "Mafia",
+        "description": "Can attach a bomb to a player. The next morning, the narrator announces the bomb. The target must either sacrifice themselves or defuse it correctly, or they are eliminated.",
+        "win_condition": "faction",
+        "passive_abilities": [],
+        "interaction_rules": [],
+        "actions": {
+          "night": [
+            {
+              "name": "Attach Bomb",
+              "command": "attach_bomb",
+              "description": "Attach a bomb to a player; the target must decide to sacrifice or defuse.",
+              "priority": 8,
+              "targets": 1,
+              "target_filter": "alive,not_self",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Attaches a bomb to the targeted player; they must either sacrifice themselves or attempt to defuse the bomb correctly, or be eliminated."
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "command": "vote",
+              "description": "Vote to eliminate a player during the day.",
+              "priority": 1,
+              "targets": 1,
+              "target_filter": "alive,not_self",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Registers a vote to eliminate the chosen player during the day."
+            }
+          ]
+        }
+      },
+      "LadyVoodoo": {
+        "faction": "Mafia",
+        "description": "Each night chooses a player and a word. If the chosen player uses the word during the day, they are immediately removed from the game.",
+        "win_condition": "faction",
+        "passive_abilities": [],
+        "interaction_rules": [],
+        "actions": {
+          "night": [
+            {
+              "name": "Curse",
+              "command": "curse",
+              "description": "Choose a player and a word; if used during the day, the target is eliminated.",
+              "priority": 8,
+              "targets": 1,
+              "target_filter": "alive,not_self",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Curses a chosen player with a word; if the target utters the cursed word during the day, they are immediately eliminated."
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "command": "vote",
+              "description": "Vote to eliminate a player during the day.",
+              "priority": 1,
+              "targets": 1,
+              "target_filter": "alive,not_self",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Registers a vote to eliminate the chosen player during the day."
+            }
+          ]
+        }
+      }
+    }
+  }
+  

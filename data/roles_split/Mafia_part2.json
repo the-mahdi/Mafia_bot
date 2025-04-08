@@ -1,0 +1,345 @@
+{
+    "roles": {
+      "DoubleFace": {
+        "faction": "Mafia",
+        "description": "A member of the mafia team but never wakes up with them and always appears as a citizen for the detective.",
+        "win_condition": "faction",
+        "passive_abilities": [],
+        "interaction_rules": {},
+        "actions": {
+          "night": [],
+          "day": [
+            {
+              "name": "Vote",
+              "description": "Vote to eliminate a player during the day.",
+              "targets": 1,
+              "command": "vote",
+              "interactive": "button",
+              "priority": 1,
+              "target_filter": "alive",
+              "self_target": false,
+              "effect": "Registers vote against the selected player."
+            }
+          ]
+        }
+      },
+      "Yakuza": {
+        "faction": "Mafia",
+        "description": "A member of the mafia. When their role is revealed, they can turn one player into a mafia member, sacrificing themselves.",
+        "win_condition": "faction",
+        "passive_abilities": [],
+        "interaction_rules": {},
+        "actions": {
+          "night": [
+            {
+              "name": "Convert",
+              "description": "Turn one player into a mafia member at the cost of your life.",
+              "targets": 1,
+              "command": "convert",
+              "interactive": "button",
+              "priority": 5,
+              "target_filter": "alive",
+              "self_target": false,
+              "effect": "Converts the target to a mafia member and eliminates the user."
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "description": "Vote to eliminate a player during the day.",
+              "targets": 1,
+              "command": "vote",
+              "interactive": "button",
+              "priority": 1,
+              "target_filter": "alive",
+              "self_target": false,
+              "effect": "Registers vote against the selected player."
+            }
+          ]
+        }
+      },
+      "MafiaSpecialist": {
+        "faction": "Mafia",
+        "description": "If the number of players alive is half or less, they can take on a mafia role that was eliminated previously.",
+        "win_condition": "faction",
+        "passive_abilities": [],
+        "interaction_rules": {},
+        "actions": {
+          "night": [
+            {
+              "name": "Revive Mafia",
+              "description": "Assume a mafia role that was eliminated if players alive are half or less.",
+              "targets": 1,
+              "command": "revive_mafia",
+              "interactive": "button",
+              "priority": 5,
+              "target_filter": "eliminated",
+              "self_target": false,
+              "effect": "Revives an eliminated mafia role for the target player."
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "description": "Vote to eliminate a player during the day.",
+              "targets": 1,
+              "command": "vote",
+              "interactive": "button",
+              "priority": 1,
+              "target_filter": "alive",
+              "self_target": false,
+              "effect": "Registers vote against the selected player."
+            }
+          ]
+        }
+      },
+      "Butcher": {
+        "faction": "Mafia",
+        "description": "Can convert all eliminated mafia members to regular citizens once in the game.",
+        "win_condition": "faction",
+        "passive_abilities": [],
+        "interaction_rules": {},
+        "actions": {
+          "night": [
+            {
+              "name": "Convert Mafia",
+              "description": "Convert all eliminated mafia members to citizens.",
+              "targets": 0,
+              "command": "convert_mafia",
+              "interactive": "passive",
+              "priority": 5,
+              "target_filter": "eliminated_mafia",
+              "self_target": false,
+              "effect": "Converts all eliminated mafia members to citizens, usable only once.",
+              "uses": 1
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "description": "Vote to eliminate a player during the day.",
+              "targets": 1,
+              "command": "vote",
+              "interactive": "button",
+              "priority": 1,
+              "target_filter": "alive",
+              "self_target": false,
+              "effect": "Registers vote against the selected player."
+            }
+          ]
+        }
+      },
+      "Thief": {
+        "faction": "Mafia",
+        "description": "Can steal someone's role and use its ability.",
+        "win_condition": "faction",
+        "passive_abilities": [],
+        "interaction_rules": {},
+        "actions": {
+          "night": [
+            {
+              "name": "Steal Role",
+              "description": "Steal a role from another player and use its ability.",
+              "targets": 1,
+              "command": "steal_role",
+              "interactive": "button",
+              "priority": 5,
+              "target_filter": "alive",
+              "self_target": false,
+              "effect": "Steals the target's role and grants its ability for the night."
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "description": "Vote to eliminate a player during the day.",
+              "targets": 1,
+              "command": "vote",
+              "interactive": "button",
+              "priority": 1,
+              "target_filter": "alive",
+              "self_target": false,
+              "effect": "Registers vote against the selected player."
+            }
+          ]
+        }
+      },
+      "Trickster": {
+        "faction": "Mafia",
+        "description": "Each night, point to two players. If one is a doctor and the other a detective, the doctor is killed and the detective is saved.",
+        "win_condition": "faction",
+        "passive_abilities": [],
+        "interaction_rules": {},
+        "actions": {
+          "night": [
+            {
+              "name": "Trick",
+              "description": "Point to two players; if one is a doctor and one is a detective, apply special effects.",
+              "targets": 2,
+              "command": "trick",
+              "interactive": "button",
+              "priority": 5,
+              "target_filter": "alive",
+              "self_target": false,
+              "effect": "If the targets include a doctor and a detective, the doctor is killed and the detective is saved."
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "description": "Vote to eliminate a player during the day.",
+              "targets": 1,
+              "command": "vote",
+              "interactive": "button",
+              "priority": 1,
+              "target_filter": "alive",
+              "self_target": false,
+              "effect": "Registers vote against the selected player."
+            }
+          ]
+        }
+      },
+      "Enchanter": {
+        "faction": "Mafia",
+        "description": "Each night, block a player's ability or place a word curse. If the cursed word is used the next day, the player is eliminated.",
+        "win_condition": "faction",
+        "passive_abilities": [],
+        "interaction_rules": {},
+        "actions": {
+          "night": [
+            {
+              "name": "Enchant",
+              "description": "Block a player's ability or place a word curse.",
+              "targets": 1,
+              "command": "enchant",
+              "interactive": "button",
+              "priority": 5,
+              "target_filter": "alive",
+              "self_target": false,
+              "effect": "Blocks the target's ability; if the cursed word is used the following day, the target is eliminated."
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "description": "Vote to eliminate a player during the day.",
+              "targets": 1,
+              "command": "vote",
+              "interactive": "button",
+              "priority": 1,
+              "target_filter": "alive",
+              "self_target": false,
+              "effect": "Registers vote against the selected player."
+            }
+          ]
+        }
+      },
+      "Saboteur": {
+        "faction": "Mafia",
+        "description": "Can sabotage a player using a gun. If the sabotaged player shoots, they are killed.",
+        "win_condition": "faction",
+        "passive_abilities": [],
+        "interaction_rules": {},
+        "actions": {
+          "night": [
+            {
+              "name": "Sabotage",
+              "description": "Sabotage a player using a gun; if the sabotaged player shoots, they are killed.",
+              "targets": 1,
+              "command": "sabotage",
+              "interactive": "button",
+              "priority": 5,
+              "target_filter": "alive",
+              "self_target": false,
+              "effect": "If the sabotaged player attempts to shoot, they are immediately killed."
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "description": "Vote to eliminate a player during the day.",
+              "targets": 1,
+              "command": "vote",
+              "interactive": "button",
+              "priority": 1,
+              "target_filter": "alive",
+              "self_target": false,
+              "effect": "Registers vote against the selected player."
+            }
+          ]
+        }
+      },
+      "PoisonMaker": {
+        "faction": "Mafia",
+        "description": "Can poison one player once per game. The poisoned player is eliminated two days later. Mafia cannot shoot on the night poison is used.",
+        "win_condition": "faction",
+        "passive_abilities": [],
+        "interaction_rules": {},
+        "actions": {
+          "night": [
+            {
+              "name": "Poison",
+              "description": "Poison one player; they will be eliminated two days later.",
+              "targets": 1,
+              "command": "poison",
+              "interactive": "button",
+              "priority": 5,
+              "target_filter": "alive",
+              "self_target": false,
+              "effect": "Poisons the target so that they are eliminated two days later.",
+              "uses": 1
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "description": "Vote to eliminate a player during the day.",
+              "targets": 1,
+              "command": "vote",
+              "interactive": "button",
+              "priority": 1,
+              "target_filter": "alive",
+              "self_target": false,
+              "effect": "Registers vote against the selected player."
+            }
+          ]
+        }
+      },
+      "Spy": {
+        "faction": "Mafia",
+        "description": "A mafia member whose allegiance may change if awakened by a Freemason.",
+        "win_condition": "faction",
+        "passive_abilities": [],
+        "interaction_rules": {},
+        "actions": {
+          "night": [
+            {
+              "name": "Spy Action",
+              "description": "Perform spy actions; if awakened by a Freemason, switch allegiance.",
+              "targets": 0,
+              "command": "spy_action",
+              "interactive": "passive",
+              "priority": 5,
+              "target_filter": "none",
+              "self_target": false,
+              "effect": "Executes espionage tasks and may change allegiance under specific conditions."
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "description": "Vote to eliminate a player during the day.",
+              "targets": 1,
+              "command": "vote",
+              "interactive": "button",
+              "priority": 1,
+              "target_filter": "alive",
+              "self_target": false,
+              "effect": "Registers vote against the selected player."
+            }
+          ]
+        }
+      }
+    }
+  }
+  

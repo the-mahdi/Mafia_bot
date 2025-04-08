@@ -1,0 +1,379 @@
+{
+    "roles": {
+      "Hunter": {
+        "faction": "Villager",
+        "description": "Each night, the Hunter can link with one player. If either dies during a night kill or subsequent vote, the other also dies.",
+        "win_condition": "faction",
+        "passive_abilities": [],
+        "interaction_rules": {},
+        "actions": {
+          "night": [
+            {
+              "name": "Hunter Link",
+              "description": "Link yourself with one player; if either dies, both die.",
+              "command": "hunter_link",
+              "priority": 5,
+              "targets": 1,
+              "target_filter": "alive, not_self",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Creates a fatal connection between the Hunter and the target. If either dies, the other is immediately eliminated."
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "description": "Vote to eliminate a player during the day.",
+              "command": "vote",
+              "priority": 1,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Casts a vote for elimination during the day."
+            }
+          ]
+        }
+      },
+      "PoliceChief": {
+        "faction": "Villager",
+        "description": "If the PoliceChief dies during the day, the game master announces their role and they get one final shot. If the shot is used on a mafia, that mafia is eliminated.",
+        "win_condition": "faction",
+        "passive_abilities": [],
+        "interaction_rules": {
+          "death_trigger": "Upon death during the day, the 'Last Shot' action is triggered."
+        },
+        "actions": {
+          "night": [],
+          "day": [
+            {
+              "name": "Vote",
+              "description": "Vote to eliminate a player during the day.",
+              "command": "vote",
+              "priority": 1,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Casts a vote for elimination during the day."
+            }
+          ],
+          "trigger": [
+            {
+              "name": "Last Shot",
+              "description": "Upon death during the day, take one final shot at a mafia.",
+              "command": "last_shot",
+              "priority": 10,
+              "targets": 1,
+              "target_filter": "faction:Mafia",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "If aimed at a mafia member, eliminates them immediately."
+            }
+          ]
+        }
+      },
+      "Revealer": {
+        "faction": "Villager",
+        "description": "If eliminated during the game, their role and the reason for death are revealed to everyone.",
+        "win_condition": "faction",
+        "passive_abilities": [
+          "Automatically reveals role and cause of death upon elimination."
+        ],
+        "interaction_rules": {
+          "reveal_on_death": true
+        },
+        "actions": {
+          "night": [],
+          "day": [
+            {
+              "name": "Vote",
+              "description": "Vote to eliminate a player during the day.",
+              "command": "vote",
+              "priority": 1,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Casts a vote for elimination during the day."
+            }
+          ],
+          "trigger": [
+            {
+              "name": "Reveal",
+              "description": "Upon elimination, reveal your role and the reason for death.",
+              "command": "reveal",
+              "priority": 10,
+              "targets": 0,
+              "target_filter": "none",
+              "interactive": "passive",
+              "self_target": false,
+              "effect": "Broadcasts role details and cause of death to all players."
+            }
+          ]
+        }
+      },
+      "CitizenSpecialist": {
+        "faction": "Villager",
+        "description": "If the number of players alive is half or less, they can take on a citizen role that was eliminated previously.",
+        "win_condition": "faction",
+        "passive_abilities": [],
+        "interaction_rules": {
+          "activation_condition": "Activates only when the number of alive players is less than or equal to half of the total."
+        },
+        "actions": {
+          "night": [
+            {
+              "name": "Revive Citizen",
+              "description": "Assume a citizen role that was eliminated if players alive are half or less.",
+              "command": "revive_citizen",
+              "priority": 7,
+              "targets": 1,
+              "target_filter": "eliminated",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Grants the role of a previously eliminated citizen to the player."
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "description": "Vote to eliminate a player during the day.",
+              "command": "vote",
+              "priority": 1,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Casts a vote for elimination during the day."
+            }
+          ]
+        }
+      },
+      "Commander": {
+        "faction": "Villager",
+        "description": "Wakes up after the sniper takes their shot. Can confirm or deny the sniper's shot. If the sniper mistakenly kills a citizen, the Commander may also be removed (depending on the scenario).",
+        "win_condition": "faction",
+        "passive_abilities": [],
+        "interaction_rules": {
+          "post_sniper": "Activated after a sniper shot to verify its legitimacy."
+        },
+        "actions": {
+          "night": [
+            {
+              "name": "Counter Sniper",
+              "description": "After a sniper shot, confirm or deny the shot.",
+              "command": "counter_sniper",
+              "priority": 6,
+              "targets": 0,
+              "target_filter": "none",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Counters the sniper's action and resolves the outcome of the shot."
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "description": "Vote to eliminate a player during the day.",
+              "command": "vote",
+              "priority": 1,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Casts a vote for elimination during the day."
+            }
+          ]
+        }
+      },
+      "Elite": {
+        "faction": "Villager",
+        "description": "Once in the game, they can ask the game master for the identity of a citizen role.",
+        "win_condition": "faction",
+        "passive_abilities": [],
+        "interaction_rules": {
+          "limited_use": "Ability can be used only once per game."
+        },
+        "actions": {
+          "night": [
+            {
+              "name": "Inquiry",
+              "description": "Ask the game master for the identity of a citizen role.",
+              "command": "inquiry",
+              "priority": 6,
+              "targets": 0,
+              "target_filter": "none",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Reveals the identity of a citizen role from previously eliminated players.",
+              "uses": 1
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "description": "Vote to eliminate a player during the day.",
+              "command": "vote",
+              "priority": 1,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Casts a vote for elimination during the day."
+            }
+          ]
+        }
+      },
+      "Gunsmith": {
+        "faction": "Villager",
+        "description": "Can give a special gun with one powerful bullet to a player. That player can use it the next day and is publicly announced. If they do not shoot, they must pass it on the next night. The gun can be sabotaged; if the shooter is shot, they die.",
+        "win_condition": "faction",
+        "passive_abilities": [],
+        "interaction_rules": {
+          "weapon_transfer": "The gun must be passed on if not used; if sabotaged, it may cause the shooter to die."
+        },
+        "actions": {
+          "night": [
+            {
+              "name": "Arm Player",
+              "description": "Give a special gun with one powerful bullet to a player.",
+              "command": "arm_player",
+              "priority": 7,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Arms a chosen player with a special gun for use the following day."
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "description": "Vote to eliminate a player during the day.",
+              "command": "vote",
+              "priority": 1,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Casts a vote for elimination during the day."
+            }
+          ]
+        }
+      },
+      "Priest": {
+        "faction": "Villager",
+        "description": "Each night, select a number of players. The next day, those players can speak longer and are immune to silencing.",
+        "win_condition": "faction",
+        "passive_abilities": [],
+        "interaction_rules": {
+          "silence_immunity": "Players blessed by the Priest are immune to silencing during the following day."
+        },
+        "actions": {
+          "night": [
+            {
+              "name": "Bless",
+              "description": "Select players to grant extended speaking time and immunity to silence for the next day.",
+              "command": "bless",
+              "priority": 7,
+              "targets": "multiple",
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": true,
+              "effect": "Grants extended speaking time and protects selected players from being silenced."
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "description": "Vote to eliminate a player during the day.",
+              "command": "vote",
+              "priority": 1,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Casts a vote for elimination during the day."
+            }
+          ]
+        }
+      },
+      "Doppelganger": {
+        "faction": "Villager",
+        "description": "Starts with no allegiance; each night, choose a player. When that player is eliminated, the Doppelganger gains their ability.",
+        "win_condition": "faction",
+        "passive_abilities": [],
+        "interaction_rules": {
+          "ability_copy": "On the target's elimination, the Doppelganger copies their ability."
+        },
+        "actions": {
+          "night": [
+            {
+              "name": "Mimic",
+              "description": "Choose a player; when they are eliminated, gain their ability.",
+              "command": "mimic",
+              "priority": 8,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Copies the ability of a chosen player upon their elimination."
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "description": "Vote to eliminate a player during the day.",
+              "command": "vote",
+              "priority": 1,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Casts a vote for elimination during the day."
+            }
+          ]
+        }
+      },
+      "Tyler": {
+        "faction": "Villager",
+        "description": "Wakes up on the first night with a Mason. They know each other and form a Freemason team.",
+        "win_condition": "faction",
+        "passive_abilities": [],
+        "interaction_rules": {
+          "team_identification": "Identifies the Mason partner on the first night."
+        },
+        "actions": {
+          "night": [
+            {
+              "name": "Identify Mason",
+              "description": "Identify your Mason partner on the first night.",
+              "command": "identify_mason",
+              "priority": 7,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Identifies the Mason partner for team formation.",
+              "uses": 1
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "description": "Vote to eliminate a player during the day.",
+              "command": "vote",
+              "priority": 1,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Casts a vote for elimination during the day."
+            }
+          ]
+        }
+      }
+    }
+  }
+  

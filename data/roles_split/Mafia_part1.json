@@ -1,0 +1,366 @@
+{
+    "roles": {
+      "MafiaSa": {
+        "faction": "Mafia",
+        "description": "The \"Mafia Sade\" is a regular mafia member without any special abilities. Their goal is to blend in with the town, avoid detection, and eliminate town members during the night.",
+        "win_condition": "faction",
+        "passive_abilities": [],
+        "interaction_rules": [],
+        "actions": {
+          "night": [],
+          "day": [
+            {
+              "name": "Vote",
+              "description": "Vote to eliminate a player during the day.",
+              "command": "vote",
+              "priority": 1,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Registers a vote for elimination during the day."
+            }
+          ]
+        }
+      },
+      "God F": {
+        "faction": "Mafia",
+        "description": "The God Father is the leader of the mafia. They appear innocent if investigated by the Detective and make the final decision on who the mafia targets each night. Their survival is crucial for the mafia's success.",
+        "win_condition": "faction",
+        "passive_abilities": [],
+        "interaction_rules": [],
+        "actions": {
+          "night": [
+            {
+              "name": "Kill",
+              "description": "Choose a player for the mafia to eliminate.",
+              "command": "kill",
+              "priority": 5,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Executes a kill command on the selected target.",
+              "transfer_if_removed": [
+                "Joker",
+                "DoctorLec",
+                "Natasha"
+              ]
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "description": "Vote to eliminate a player during the day.",
+              "command": "vote",
+              "priority": 1,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Registers a vote for elimination during the day."
+            }
+          ]
+        }
+      },
+      "Mashoghe": {
+        "faction": "Mafia",
+        "description": "The \"Mashoghe,\" or Lover of the God Father, makes the God Father furious if they die, allowing the Mafia to kill two players the following night.",
+        "win_condition": "faction",
+        "passive_abilities": [],
+        "interaction_rules": [],
+        "actions": {
+          "night": [
+            {
+              "name": "Double Kill",
+              "description": "If you die, the mafia can kill two players the following night.",
+              "command": "double_kill",
+              "priority": 1,
+              "targets": 2,
+              "target_filter": "alive",
+              "interactive": "none",
+              "self_target": false,
+              "effect": "Triggers a double elimination on the following night upon death.",
+              "trigger": "on_death"
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "description": "Vote to eliminate a player during the day.",
+              "command": "vote",
+              "priority": 1,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Registers a vote for elimination during the day."
+            }
+          ]
+        }
+      },
+      "Joker": {
+        "faction": "Mafia",
+        "description": "The Joker chooses a player during the night. If the Detective chooses the same player, the Joker's action will reverse the results, revealing Mafia members as town and citizens as Mafia.",
+        "win_condition": "faction",
+        "passive_abilities": [],
+        "interaction_rules": [],
+        "actions": {
+          "night": [
+            {
+              "name": "Joker Action",
+              "description": "Choose a player during the night. (Enabled only if God F is removed.)",
+              "command": "joker_action",
+              "priority": 1,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Executes Joker action to reverse investigation results under condition.",
+              "conditional": "if_god_f_removed"
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "description": "Vote to eliminate a player during the day.",
+              "command": "vote",
+              "priority": 1,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Registers a vote for elimination during the day."
+            }
+          ]
+        }
+      },
+      "DoctorLec": {
+        "faction": "Mafia",
+        "description": "Doctor Lecter can save one of the Mafia members from the \"Tak Tir Andaz\" or Sniper each night.",
+        "win_condition": "faction",
+        "passive_abilities": [],
+        "interaction_rules": [],
+        "actions": {
+          "night": [
+            {
+              "name": "Save Mafia",
+              "description": "Save one of the Mafia members from the Sniper's shot. (Available only if God F is removed.)",
+              "command": "save_mafia",
+              "priority": 4,
+              "targets": 1,
+              "target_filter": "alive, faction:Mafia",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Prevents the target Mafia member from being killed by a Sniper attack.",
+              "conditional": "if_god_f_removed"
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "description": "Vote to eliminate a player during the day.",
+              "command": "vote",
+              "priority": 1,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Registers a vote for elimination during the day."
+            }
+          ]
+        }
+      },
+      "Natasha": {
+        "faction": "Mafia",
+        "description": "Natasha can silence one player each night, preventing them from talking during the next day. The Keshish or Priest can neutralize the silence effect if they choose the same person.",
+        "win_condition": "faction",
+        "passive_abilities": [],
+        "interaction_rules": [],
+        "actions": {
+          "night": [
+            {
+              "name": "Silence",
+              "description": "Silence one player for the next day. (Enabled if God F is removed.)",
+              "command": "silence",
+              "priority": 3,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Prevents the target from speaking during the next day.",
+              "conditional": "if_god_f_removed"
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "description": "Vote to eliminate a player during the day.",
+              "command": "vote",
+              "priority": 1,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Registers a vote for elimination during the day."
+            }
+          ]
+        }
+      },
+      "Terrorist": {
+        "faction": "Mafia",
+        "description": "If the Terrorist dies during the day by a gun or vote, they can take someone with them out of the game.",
+        "win_condition": "faction",
+        "passive_abilities": [],
+        "interaction_rules": [],
+        "actions": {
+          "night": [
+            {
+              "name": "Explosive Exit",
+              "description": "Upon death during the day, take one player out of the game.",
+              "command": "explosive_exit",
+              "priority": 1,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "none",
+              "self_target": false,
+              "effect": "Triggers an elimination on a target when the Terrorist dies.",
+              "trigger": "on_death"
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "description": "Vote to eliminate a player during the day.",
+              "command": "vote",
+              "priority": 1,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Registers a vote for elimination during the day."
+            }
+          ]
+        }
+      },
+      "Mozakere": {
+        "faction": "Mafia",
+        "description": "The \"Mozakere Konande,\" or Negotiator, can negotiate with some town citizens to become Mafia Sade. The negotiation can only be performed on Shahr Sade (simple citizens) or other roles announced by the coordinator.",
+        "win_condition": "faction",
+        "passive_abilities": [],
+        "interaction_rules": [],
+        "actions": {
+          "night": [
+            {
+              "name": "Negotiate",
+              "description": "Negotiate with citizens to potentially join the mafia.",
+              "command": "negotiate",
+              "priority": 2,
+              "targets": 1,
+              "target_filter": "alive, faction:Villager",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Initiates negotiation to recruit a town member to the Mafia."
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "description": "Vote to eliminate a player during the day.",
+              "command": "vote",
+              "priority": 1,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Registers a vote for elimination during the day."
+            }
+          ]
+        }
+      },
+      "ShahKosh": {
+        "faction": "Mafia",
+        "description": "The \"Shah Kosh,\" or King Slayer, can guess the role of a citizen during the night. If guessed correctly, that player will be removed from the game.",
+        "win_condition": "faction",
+        "passive_abilities": [],
+        "interaction_rules": [],
+        "actions": {
+          "night": [
+            {
+              "name": "Guess Role",
+              "description": "Guess the role of a citizen during the night; if correct, the target is removed.",
+              "command": "guess_role",
+              "priority": 3,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Attempts to eliminate a target if the guessed role matches."
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "description": "Vote to eliminate a player during the day.",
+              "command": "vote",
+              "priority": 1,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Registers a vote for elimination during the day."
+            }
+          ]
+        }
+      },
+      "MaskedFigure": {
+        "faction": "Mafia",
+        "description": "Their investigation result for the detective is positive. Neither they know their allies, nor their allies know them. They cannot be eliminated by the mafia shot at night. Alpha Power: Once per game, they can freeze the detective's investigation. Beta Power: Once per game, they can guess a citizen's role. If correct, the game master confirms and transforms the target.",
+        "win_condition": "faction",
+        "passive_abilities": [],
+        "interaction_rules": [],
+        "actions": {
+          "night": [
+            {
+              "name": "Freeze Investigation",
+              "description": "Freeze the detective's investigation, causing a neutral result.",
+              "command": "freeze_investigation",
+              "priority": 5,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Neutralizes the detective's investigation for the night.",
+              "uses": 1
+            },
+            {
+              "name": "Guess Role",
+              "description": "Guess a citizen's role; if correct, transform the target.",
+              "command": "guess_role_masked",
+              "priority": 4,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Attempts to transform the target by guessing their role correctly.",
+              "uses": 1
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "description": "Vote to eliminate a player during the day.",
+              "command": "vote",
+              "priority": 1,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Registers a vote for elimination during the day."
+            }
+          ]
+        }
+      }
+    }
+  }
+  

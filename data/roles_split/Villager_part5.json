@@ -1,0 +1,342 @@
+{
+    "roles": {
+      "Bomber": {
+        "faction": "Villager",
+        "description": "If killed at night, two players on their side also die. They can use their power once to take two players out with them.",
+        "win_condition": "faction",
+        "passive_abilities": [],
+        "interaction_rules": [],
+        "actions": {
+          "night": [
+            {
+              "name": "Bomb",
+              "description": "Use your bomb to eliminate two players.",
+              "command": "bomb",
+              "priority": 7,
+              "targets": 2,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Eliminates two target players when activated. Can trigger a chain reaction if used upon death.",
+              "uses": 1
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "description": "Vote to eliminate a player during the day.",
+              "command": "vote",
+              "priority": 1,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Casts a vote to eliminate the selected player."
+            }
+          ]
+        }
+      },
+      "Exposer": {
+        "faction": "Villager",
+        "description": "If eliminated by day vote (and not by a night kill), they can choose one player and reveal whether they are a citizen or mafia member.",
+        "win_condition": "faction",
+        "passive_abilities": [],
+        "interaction_rules": [],
+        "actions": {
+          "night": [],
+          "day": [
+            {
+              "name": "Vote",
+              "description": "Vote to eliminate a player during the day.",
+              "command": "vote",
+              "priority": 1,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Casts a vote to eliminate the selected player."
+            }
+          ],
+          "trigger": [
+            {
+              "name": "Expose",
+              "description": "Upon elimination by vote, reveal a player's faction.",
+              "command": "expose",
+              "priority": 5,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "passive",
+              "self_target": false,
+              "effect": "Reveals the faction of the target player upon being voted out."
+            }
+          ]
+        }
+      },
+      "Physician": {
+        "faction": "Villager",
+        "description": "Each night, they give an antidote to a player. If that player was poisoned, they survive. They can save themselves twice with their antidote.",
+        "win_condition": "faction",
+        "passive_abilities": [],
+        "interaction_rules": [],
+        "actions": {
+          "night": [
+            {
+              "name": "Antidote",
+              "description": "Give an antidote to a player; if poisoned, they survive.",
+              "command": "antidote",
+              "priority": 8,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": true,
+              "effect": "Administers an antidote that saves the target from poisoning.",
+              "uses": 2
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "description": "Vote to eliminate a player during the day.",
+              "command": "vote",
+              "priority": 1,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Casts a vote to eliminate the selected player."
+            }
+          ]
+        }
+      },
+      "ToughGuy": {
+        "faction": "Villager",
+        "description": "If shot by the mafia, they are not eliminated immediately but lose their ability for that night; a second shot eliminates them.",
+        "win_condition": "faction",
+        "passive_abilities": [],
+        "interaction_rules": [],
+        "actions": {
+          "night": [],
+          "day": [
+            {
+              "name": "Vote",
+              "description": "Vote to eliminate a player during the day.",
+              "command": "vote",
+              "priority": 1,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Casts a vote to eliminate the selected player."
+            }
+          ]
+        }
+      },
+      "Sacrifice": {
+        "faction": "Villager",
+        "description": "Can sacrifice themselves at any time to protect another player who is about to be voted out.",
+        "win_condition": "faction",
+        "passive_abilities": [],
+        "interaction_rules": [],
+        "actions": {
+          "night": [
+            {
+              "name": "Sacrifice",
+              "description": "Sacrifice yourself to protect another player from being voted out.",
+              "command": "sacrifice",
+              "priority": 9,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": true,
+              "effect": "Sacrifices self to prevent the target from being eliminated during the vote.",
+              "trigger": "on_vote"
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "description": "Vote to eliminate a player during the day.",
+              "command": "vote",
+              "priority": 1,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Casts a vote to eliminate the selected player."
+            }
+          ]
+        }
+      },
+      "Sheriff": {
+        "faction": "Villager",
+        "description": "Each night, the Sheriff can shoot one player. If they shoot a mafia member, that mafia is eliminated; if they shoot a citizen, the Sheriff is eliminated.",
+        "win_condition": "faction",
+        "passive_abilities": [],
+        "interaction_rules": [],
+        "actions": {
+          "night": [
+            {
+              "name": "Shoot",
+              "description": "Shoot one player during the night; if the target is mafia, they are eliminated.",
+              "command": "sheriff_shoot",
+              "priority": 10,
+              "targets": 1,
+              "target_filter": "alive,not_self",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Attempts to eliminate the target player; if the target is mafia, the shot is successful, otherwise the Sheriff is penalized."
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "description": "Vote to eliminate a player during the day.",
+              "command": "vote",
+              "priority": 1,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Casts a vote to eliminate the selected player."
+            }
+          ]
+        }
+      },
+      "NightWatch": {
+        "faction": "Villager",
+        "description": "One night in the game, they can ask the game master who targeted them. The answer reveals only the players, not their roles.",
+        "win_condition": "faction",
+        "passive_abilities": [],
+        "interaction_rules": [],
+        "actions": {
+          "night": [
+            {
+              "name": "Inquiry Target",
+              "description": "Ask the game master who targeted you during the night.",
+              "command": "inquiry_target",
+              "priority": 5,
+              "targets": 0,
+              "target_filter": "none",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Reveals the players who targeted you during the night.",
+              "uses": 1
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "description": "Vote to eliminate a player during the day.",
+              "command": "vote",
+              "priority": 1,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Casts a vote to eliminate the selected player."
+            }
+          ]
+        }
+      },
+      "Swordsman": {
+        "faction": "Villager",
+        "description": "A citizen who can give a sword to another person one time in the game. The recipient may use the sword at night.",
+        "win_condition": "faction",
+        "passive_abilities": [],
+        "interaction_rules": [],
+        "actions": {
+          "night": [
+            {
+              "name": "Gift Sword",
+              "description": "Give a sword to another player; they can use it at night.",
+              "command": "gift_sword",
+              "priority": 5,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Transfers a sword to the target, enabling them to use it during the night.",
+              "uses": 1
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "description": "Vote to eliminate a player during the day.",
+              "command": "vote",
+              "priority": 1,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Casts a vote to eliminate the selected player."
+            }
+          ]
+        }
+      },
+      "Jupiter": {
+        "faction": "Villager",
+        "description": "Protects a citizen from becoming a yakuza each night.",
+        "win_condition": "faction",
+        "passive_abilities": [],
+        "interaction_rules": [],
+        "actions": {
+          "night": [
+            {
+              "name": "Protect",
+              "description": "Protect a citizen from becoming a yakuza.",
+              "command": "protect",
+              "priority": 7,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Prevents the target citizen from being turned into a yakuza during the night."
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "description": "Vote to eliminate a player during the day.",
+              "command": "vote",
+              "priority": 1,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Casts a vote to eliminate the selected player."
+            }
+          ]
+        }
+      },
+      "Ronan": {
+        "faction": "Villager",
+        "description": "If attacked at night and not saved by the doctor, their injury is announced the next morning. Ronan can continue to vote until the day's voting is complete.",
+        "win_condition": "faction",
+        "passive_abilities": [
+          {
+            "name": "Injury Announcement",
+            "description": "If attacked at night and not saved, the injury is announced the next morning."
+          }
+        ],
+        "interaction_rules": [],
+        "actions": {
+          "night": [],
+          "day": [
+            {
+              "name": "Vote",
+              "description": "Vote to eliminate a player during the day.",
+              "command": "vote",
+              "priority": 1,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Casts a vote to eliminate the selected player."
+            }
+          ]
+        }
+      }
+    }
+  }
+  

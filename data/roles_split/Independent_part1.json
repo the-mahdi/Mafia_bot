@@ -1,0 +1,355 @@
+{
+    "roles": {
+      "Zodiac": {
+        "faction": "Independent",
+        "description": "An independent serial killer immune to night attacks, killing on even nights, but vulnerable to day actions and bombs.",
+        "win_condition": "Last Man Standing",
+        "passive_abilities": [],
+        "interaction_rules": [],
+        "actions": {
+          "night": [
+            {
+              "name": "Serial Kill",
+              "command": "serial_kill",
+              "description": "Kill one player on even nights.",
+              "priority": 8,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Kills target only on even nights. Immune to night attacks but vulnerable to day actions."
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "command": "vote",
+              "description": "Vote to eliminate a player during the day.",
+              "priority": 1,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Registers a vote to eliminate a player during the day."
+            }
+          ]
+        }
+      },
+      "Jigsaw": {
+        "faction": "Independent",
+        "description": "Immortal at night, chooses 3 players and gives one a saw. In the day, the chosen player is called to the gas chamber where execution is decided.",
+        "win_condition": null,
+        "passive_abilities": [
+          "Immortal at night"
+        ],
+        "interaction_rules": [],
+        "actions": {
+          "night": [
+            {
+              "name": "Gas Chamber",
+              "command": "gas_chamber",
+              "description": "Choose 3 players and assign a saw; later, call one to the gas chamber for execution.",
+              "priority": 8,
+              "targets": 3,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Assigns a saw to one of the chosen players and calls them to the gas chamber for execution."
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "command": "vote",
+              "description": "Vote to eliminate a player during the day.",
+              "priority": 1,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Registers a vote to eliminate a player during the day."
+            }
+          ]
+        }
+      },
+      "JackSparrow": {
+        "faction": "Independent",
+        "description": "Neither mafia nor citizen, must win alone. Immune to night kills and day voting, but must curse one person every night. Special win conditions apply.",
+        "win_condition": "Special win conditions apply",
+        "passive_abilities": [
+          "Immune to night kills and day voting"
+        ],
+        "interaction_rules": [],
+        "actions": {
+          "night": [
+            {
+              "name": "Curse",
+              "command": "curse",
+              "description": "Curse one player every night. Special conditions apply.",
+              "priority": 8,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Applies a curse to the target with unique negative side effects."
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "command": "vote",
+              "description": "Vote to eliminate a player during the day.",
+              "priority": 1,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Registers a vote to eliminate a player during the day."
+            }
+          ]
+        }
+      },
+      "SherlockHolmes": {
+        "faction": "Independent",
+        "description": "Helps the third godfather role. For the first two nights, is immortal and uses their sixth sense to guess a player's role. If correct, roles swap and the target is eliminated; if not, special conditions apply.",
+        "win_condition": null,
+        "passive_abilities": [
+          "Immortal for the first two nights"
+        ],
+        "interaction_rules": [],
+        "actions": {
+          "night": [
+            {
+              "name": "Sixth Sense",
+              "command": "sixth_sense",
+              "description": "Guess a player's role using your sixth sense; if correct, swap roles and eliminate the target.",
+              "priority": 8,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Uses sixth sense to guess a player's role; if correct, swaps roles and eliminates the target."
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "command": "vote",
+              "description": "Vote to eliminate a player during the day.",
+              "priority": 1,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Registers a vote to eliminate a player during the day."
+            }
+          ]
+        }
+      },
+      "Carrier": {
+        "faction": "Independent",
+        "description": "Players chosen by the Carrier become infected—unable to speak on the first day, lose actions at night, can’t vote on the second day, and die on the second night.",
+        "win_condition": null,
+        "passive_abilities": [
+          "Infects chosen players causing communication and voting restrictions over multiple days"
+        ],
+        "interaction_rules": [],
+        "actions": {
+          "night": [],
+          "day": [
+            {
+              "name": "Vote",
+              "command": "vote",
+              "description": "Vote to eliminate a player during the day.",
+              "priority": 1,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Registers a vote to eliminate a player during the day."
+            }
+          ]
+        }
+      },
+      "Werewolf": {
+        "faction": "Independent",
+        "description": "Every three nights, turns a player into a wolf. Their attack does not affect the Hunter or Priest. Their win condition is to convert half of the players into wolves.",
+        "win_condition": "Convert half of the players into wolves",
+        "passive_abilities": [],
+        "interaction_rules": [],
+        "actions": {
+          "night": [
+            {
+              "name": "Transform",
+              "command": "transform",
+              "description": "Turn a player into a wolf; available every three nights.",
+              "priority": 8,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Transforms a target into a wolf. Does not affect Hunter or Priest.",
+              "cooldown": 3
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "command": "vote",
+              "description": "Vote to eliminate a player during the day.",
+              "priority": 1,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Registers a vote to eliminate a player during the day."
+            }
+          ]
+        }
+      },
+      "Syndicate": {
+        "faction": "Independent",
+        "description": "Knows key roles like mafia, spy, doctor, detective, and thug. Immune to group attacks from mafia or thug. If voted in the second round, can kill one player from the blacklist.",
+        "win_condition": null,
+        "passive_abilities": [
+          "Immune to group attacks from mafia or thug"
+        ],
+        "interaction_rules": [],
+        "actions": {
+          "night": [
+            {
+              "name": "Blacklist Kill",
+              "command": "blacklist_kill",
+              "description": "If voted in the second round, kill one player from your blacklist.",
+              "priority": 8,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Kills a player from the blacklist when triggered by a second round vote.",
+              "trigger": "on_vote"
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "command": "vote",
+              "description": "Vote to eliminate a player during the day.",
+              "priority": 1,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Registers a vote to eliminate a player during the day."
+            }
+          ]
+        }
+      },
+      "Killer": {
+        "faction": "Independent",
+        "description": "One of the strongest independent roles. Each night, they kill one person (the doctor cannot save the target). Their goal is to survive and eliminate all other players.",
+        "win_condition": "Eliminate all other players",
+        "passive_abilities": [],
+        "interaction_rules": [],
+        "actions": {
+          "night": [
+            {
+              "name": "Assassinate",
+              "command": "assassinate",
+              "description": "Kill one player; the doctor cannot save the target.",
+              "priority": 8,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Assassinates a target. The doctor cannot save the target."
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "command": "vote",
+              "description": "Vote to eliminate a player during the day.",
+              "priority": 1,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Registers a vote to eliminate a player during the day."
+            }
+          ]
+        }
+      },
+      "Corona": {
+        "faction": "Independent",
+        "description": "Can infect any player (mafia or citizen). Removal is only possible during the day. Any player who interacts with Corona at night dies the next day if not saved by the doctor.",
+        "win_condition": null,
+        "passive_abilities": [],
+        "interaction_rules": [],
+        "actions": {
+          "night": [
+            {
+              "name": "Infect",
+              "command": "infect",
+              "description": "Infect a player; if not saved by the doctor, they die the next day.",
+              "priority": 8,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Infects a target, causing them to die the next day if not saved by the doctor."
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "command": "vote",
+              "description": "Vote to eliminate a player during the day.",
+              "priority": 1,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Registers a vote to eliminate a player during the day."
+            }
+          ]
+        }
+      },
+      "Unknown": {
+        "faction": "Independent",
+        "description": "Starts without a team; is chosen at night and joins the chooser's team. If not chosen by the end of the game, they lose.",
+        "win_condition": "Must be chosen to join a team to win",
+        "passive_abilities": [],
+        "interaction_rules": [],
+        "actions": {
+          "night": [
+            {
+              "name": "Choose Team",
+              "command": "choose_team",
+              "description": "At night, join the team of the chooser.",
+              "priority": 5,
+              "targets": 0,
+              "target_filter": "none",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Joins the chooser's team. If not chosen by the end of the game, the role loses."
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "command": "vote",
+              "description": "Vote to eliminate a player during the day.",
+              "priority": 1,
+              "targets": 1,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Registers a vote to eliminate a player during the day."
+            }
+          ]
+        }
+      }
+    }
+  }
+  

@@ -1,0 +1,39 @@
+{
+    "roles": {
+        "ThousandFace": {
+            "faction": "Independent",
+            "description": "Can take on the ability of any player eliminated during the day for one day. Also, if targeted by any player at night, that target is redirected back to them.",
+            "win_condition": "solo",
+            "passive_abilities": [],
+            "interaction_rules": [],
+            "actions": {
+                "night": [
+                    {
+                        "name": "Mimic Ability",
+                        "description": "Adopt the ability of a player eliminated during the day or reflect targeting back to the initiator.",
+                        "targets": 0,
+                        "command": "mimic_ability",
+                        "priority": 7,
+                        "target_filter": "none",
+                        "interactive": "button",
+                        "self_target": false,
+                        "effect": "Copies ability from eliminated player or redirects targeting back to initiator. See src/game/actions/mimic_ability.js"
+                    }
+                ],
+                "day": [
+                    {
+                        "name": "Vote",
+                        "description": "Vote to eliminate a player during the day.",
+                        "targets": 1,
+                        "command": "vote",
+                        "priority": 1,
+                        "target_filter": "alive",
+                        "interactive": "button",
+                        "self_target": false,
+                        "effect": "Registers a vote for elimination of a player."
+                    }
+                ]
+            }
+        }
+    }
+}

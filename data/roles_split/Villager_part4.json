@@ -1,0 +1,357 @@
+{
+    "roles": {
+      "Freemason": {
+        "faction": "Villager",
+        "description": "Wakes up each night and shows a player. If that player is a citizen, they wake up and join the team. If a mafia is mistakenly chosen, all masons are eliminated.",
+        "win_condition": "faction",
+        "passive_abilities": [],
+        "interaction_rules": {},
+        "actions": {
+          "night": [
+            {
+              "name": "Recruit",
+              "description": "Show a player and attempt to recruit them to the Freemason team.",
+              "targets": 1,
+              "command": "recruit",
+              "priority": 5,
+              "target_filter": "alive, not_self",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Attempts to reveal the target's faction and recruit them if they are a citizen. If the target is mafia, all masons are eliminated."
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "description": "Vote to eliminate a player during the day.",
+              "targets": 1,
+              "command": "vote",
+              "priority": 1,
+              "target_filter": "alive, not_self",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Records vote for elimination."
+            }
+          ]
+        }
+      },
+      "Inquisitor": {
+        "faction": "Villager",
+        "description": "Can choose two players and ask the game master if they are on the same team.",
+        "win_condition": "faction",
+        "passive_abilities": [],
+        "interaction_rules": {},
+        "actions": {
+          "night": [
+            {
+              "name": "Inquire Team",
+              "description": "Choose two players to determine if they are on the same team.",
+              "targets": 2,
+              "command": "inquire_team",
+              "priority": 5,
+              "target_filter": "alive, not_self",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Reveals if the two targets belong to the same team."
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "description": "Vote to eliminate a player during the day.",
+              "targets": 1,
+              "command": "vote",
+              "priority": 1,
+              "target_filter": "alive, not_self",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Records vote for elimination."
+            }
+          ]
+        }
+      },
+      "Blacksmith": {
+        "faction": "Villager",
+        "description": "Each night, can provide a suit of armor. The recipient is protected during the day until the armor falls off.",
+        "win_condition": "faction",
+        "passive_abilities": [],
+        "interaction_rules": {},
+        "actions": {
+          "night": [
+            {
+              "name": "Arm Player",
+              "description": "Provide a suit of armor to protect a player during the day.",
+              "targets": 1,
+              "command": "arm_player",
+              "priority": 5,
+              "target_filter": "alive",
+              "interactive": "button",
+              "self_target": true,
+              "effect": "Grants temporary protection to a target for the day."
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "description": "Vote to eliminate a player during the day.",
+              "targets": 1,
+              "command": "vote",
+              "priority": 1,
+              "target_filter": "alive, not_self",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Records vote for elimination."
+            }
+          ]
+        }
+      },
+      "CodeWriter": {
+        "faction": "Villager",
+        "description": "Can write a binary or 3-variable code for the game master.",
+        "win_condition": "faction",
+        "passive_abilities": [],
+        "interaction_rules": {},
+        "actions": {
+          "night": [
+            {
+              "name": "Write Code",
+              "description": "Write a binary or 3-variable code for the game master.",
+              "targets": 0,
+              "command": "write_code",
+              "priority": 5,
+              "target_filter": "none",
+              "interactive": "passive",
+              "self_target": false,
+              "effect": "Submits code to game master for verification and potential game advancement."
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "description": "Vote to eliminate a player during the day.",
+              "targets": 1,
+              "command": "vote",
+              "priority": 1,
+              "target_filter": "alive, not_self",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Records vote for elimination."
+            }
+          ]
+        }
+      },
+      "RussianRoulette": {
+        "faction": "Villager",
+        "description": "Gives a gun to someone and picks a number; the chain shooting occurs during the day if the gun is used.",
+        "win_condition": "faction",
+        "passive_abilities": [],
+        "interaction_rules": {},
+        "actions": {
+          "night": [
+            {
+              "name": "Russian Roulette",
+              "description": "Give a gun to a player and pick a number to trigger chain shooting during the day.",
+              "targets": 1,
+              "command": "russian_roulette",
+              "priority": 5,
+              "target_filter": "alive, not_self",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Assigns a weapon to a target; if conditions are met, triggers chain shooting during the day."
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "description": "Vote to eliminate a player during the day.",
+              "targets": 1,
+              "command": "vote",
+              "priority": 1,
+              "target_filter": "alive, not_self",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Records vote for elimination."
+            }
+          ]
+        }
+      },
+      "Spider": {
+        "faction": "Villager",
+        "description": "Can weave together several players. If any woven player dies during the day, all woven players die.",
+        "win_condition": "faction",
+        "passive_abilities": [],
+        "interaction_rules": {},
+        "actions": {
+          "night": [
+            {
+              "name": "Weave",
+              "description": "Link multiple players together; if any die during the day, all linked players are eliminated.",
+              "targets": "all",
+              "command": "weave",
+              "priority": 5,
+              "target_filter": "alive, not_self",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Links selected players so that they share a common fate. If any linked player is eliminated during the day, all linked players are eliminated."
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "description": "Vote to eliminate a player during the day.",
+              "targets": 1,
+              "command": "vote",
+              "priority": 1,
+              "target_filter": "alive, not_self",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Records vote for elimination."
+            }
+          ]
+        }
+      },
+      "Bartender": {
+        "faction": "Villager",
+        "description": "Each night, chooses a player who becomes 'drunk' and cannot use their ability.",
+        "win_condition": "faction",
+        "passive_abilities": [],
+        "interaction_rules": {},
+        "actions": {
+          "night": [
+            {
+              "name": "Intoxicate",
+              "description": "Choose a player to make them drunk, disabling their ability for the next night.",
+              "targets": 1,
+              "command": "intoxicate",
+              "priority": 5,
+              "target_filter": "alive, not_self",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Disables the target's night ability for one cycle."
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "description": "Vote to eliminate a player during the day.",
+              "targets": 1,
+              "command": "vote",
+              "priority": 1,
+              "target_filter": "alive, not_self",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Records vote for elimination."
+            }
+          ]
+        }
+      },
+      "Saba": {
+        "faction": "Villager",
+        "description": "Each night, can pick a player and take their role for 24 hours.",
+        "win_condition": "faction",
+        "passive_abilities": [],
+        "interaction_rules": {},
+        "actions": {
+          "night": [
+            {
+              "name": "Steal Role",
+              "description": "Take a player's role for 24 hours.",
+              "targets": 1,
+              "command": "steal_role",
+              "priority": 5,
+              "target_filter": "alive, not_self",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Temporarily assumes the abilities of the target for 24 hours."
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "description": "Vote to eliminate a player during the day.",
+              "targets": 1,
+              "command": "vote",
+              "priority": 1,
+              "target_filter": "alive, not_self",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Records vote for elimination."
+            }
+          ]
+        }
+      },
+      "Wizard": {
+        "faction": "Villager",
+        "description": "Once in the game, they can choose a player. That player loses their ability and does not wake up at night for 24 hours.",
+        "win_condition": "faction",
+        "passive_abilities": [],
+        "interaction_rules": {},
+        "actions": {
+          "night": [
+            {
+              "name": "Nullify",
+              "description": "Choose a player; they lose their ability for 24 hours.",
+              "targets": 1,
+              "command": "nullify",
+              "priority": 5,
+              "target_filter": "alive, not_self",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Removes target's night action ability temporarily.",
+              "uses": 1
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "description": "Vote to eliminate a player during the day.",
+              "targets": 1,
+              "command": "vote",
+              "priority": 1,
+              "target_filter": "alive, not_self",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Records vote for elimination."
+            }
+          ]
+        }
+      },
+      "Guardian": {
+        "faction": "Villager",
+        "description": "If a Zodiac tries to kill the Guardian, they are eliminated instead. If the bomb is on them, they get the defusal code.",
+        "win_condition": "faction",
+        "passive_abilities": [],
+        "interaction_rules": {},
+        "actions": {
+          "night": [
+            {
+              "name": "Defuse",
+              "description": "If targeted by a Zodiac's bomb, defuse it or take the hit.",
+              "targets": 0,
+              "command": "defuse",
+              "priority": 10,
+              "target_filter": "",
+              "interactive": "passive",
+              "self_target": false,
+              "effect": "Automatically triggers when attacked by a Zodiac bomb, defusing the explosion and absorbing the damage.",
+              "trigger": "on_attack"
+            }
+          ],
+          "day": [
+            {
+              "name": "Vote",
+              "description": "Vote to eliminate a player during the day.",
+              "targets": 1,
+              "command": "vote",
+              "priority": 1,
+              "target_filter": "alive, not_self",
+              "interactive": "button",
+              "self_target": false,
+              "effect": "Records vote for elimination."
+            }
+          ]
+        }
+      }
+    }
+  }
+  
