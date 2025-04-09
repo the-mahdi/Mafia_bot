@@ -6,18 +6,40 @@ import os
 logger = logging.getLogger("Mafia Bot Roles")
 
 def load_roles():
-    """Load the complete roles dictionary from roles.json."""
+    """Load the complete roles dictionary from the split JSON files in data/roles_split."""
+    roles = {}
+    roles_dir = resource_path(os.path.join('data', 'roles_split'))
+    
     try:
-        with open(resource_path(os.path.join('data', 'roles.json')), 'r') as file:
-            data = json.load(file)
-            roles = data.get('roles', {})
-            logger.debug(f"Loaded roles: {list(roles.keys())}")
-            return roles
-    except FileNotFoundError:
-        logger.error("roles.json not found.")
-        return {}
-    except json.JSONDecodeError:
-        logger.error("Invalid JSON format in roles.json.")
+        # Check if the roles_split directory exists
+        if not os.path.isdir(roles_dir):
+            logger.error(f"Directory {roles_dir} not found.")
+            return {}
+            
+        # List all JSON files in the roles_split directory
+        json_files = [f for f in os.listdir(roles_dir) if f.endswith('.json')]
+        
+        if not json_files:
+            logger.error(f"No JSON files found in {roles_dir}.")
+            return {}
+            
+        # Load roles from each JSON file and merge them
+        for json_file in json_files:
+            file_path = os.path.join(roles_dir, json_file)
+            try:
+                with open(file_path, 'r') as file:
+                    data = json.load(file)
+                    file_roles = data.get('roles', {})
+                    roles.update(file_roles)
+                    logger.debug(f"Loaded roles from {json_file}: {list(file_roles.keys())}")
+            except (FileNotFoundError, json.JSONDecodeError) as e:
+                logger.error(f"Error loading {json_file}: {e}")
+        
+        logger.info(f"Loaded a total of {len(roles)} roles from {len(json_files)} files.")
+        return roles
+        
+    except Exception as e:
+        logger.error(f"Unexpected error loading roles: {e}")
         return {}
 
 def load_role_templates():

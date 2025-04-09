@@ -32,8 +32,8 @@ This document outlines the necessary tasks to complete the Mafia Bot, focusing o
 -   [x] **Consolidate Night Outcomes:** Determine the final list of players eliminated during the night based on all resolved actions (kills, saves, suicides, immunities, role interactions, etc.).
 -   [x] **Update Player Status:** Update the `eliminated` status in the `Roles` table for players who died.
 -   [x] **Announce Night Results:** Send a public message to the game chat (or all players individually) announcing who was eliminated during the night (without revealing causes unless game rules/roles specify, e.g., `Efsha Gar`, `Revealer`).
--   [ ] **Send Private Results:** Send private results (e.g., Detective's findings, Spy's info, Hacker's result, Inquisitor's result) to the relevant players.
--   [ ] **Clear Night Actions:** Delete processed actions from the `Actions` table for the completed night phase.
+-   [x] **Send Private Results:** Send private results (e.g., Detective's findings, Spy's info, Hacker's result, Inquisitor's result) to the relevant players.
+-   [x] **Clear Night Actions:** Delete processed actions from the `Actions` table for the completed night phase.
 
 ## III. Day Phase & Voting Integration (`src/handlers/game_management/voting.py`, `src/handlers/game_management/phase_manager.py`)
 
@@ -41,7 +41,7 @@ This document outlines the necessary tasks to complete the Mafia Bot, focusing o
 -   [x] **Implement Voting Outcome Application:** Create a new function `apply_voting_outcome(game_id, context)` called after `process_voting_results`.
     -   [x] Determine the player(s) with the most votes based on `vote_counts` from `process_voting_results`.
     -   [x] Handle ties (e.g., no elimination, random tie-break, revote - define game rules).
-    -   [ ] Handle vote modification/overrides (e.g., `Ghazi`, `Sacrifice`, `WiseMan`, `Syndicate`).
+    -   [x] Handle vote modification/overrides (e.g., `Ghazi`, `Sacrifice`, `WiseMan`, `Syndicate`).
     -   [x] Update the `eliminated` status in the `Roles` table for the player(s) voted out.
     -   [x] Announce the outcome publicly (who was eliminated by vote). Handle role reveal suppression/trigger (`Executioner`, `Efsha Gar`, `Revealer`, `PoliceChief`, `Terrorist`).
 -   [x] **Integrate Voting Trigger:** Ensure the game loop automatically triggers the voting phase (`prompt_voting_permissions` or similar) after the day discussion period.
@@ -80,21 +80,11 @@ This document outlines the necessary tasks to complete the Mafia Bot, focusing o
 
 ## VII. Error Handling & User Experience
 
--   [ ] **Granular Error Handling:** Add more specific `try...except` blocks around potentially failing operations (DB writes, API calls, sending messages) within handlers and provide user-friendly feedback.
--   [ ] **Clearer Phase Transitions:** Provide explicit messages to users indicating the start and end of each phase (Night, Day, Voting).
+-   [x] **Granular Error Handling:** Add more specific `try...except` blocks around potentially failing operations (DB writes, API calls, sending messages) within handlers and provide user-friendly feedback.
+-   [x] **Clearer Phase Transitions:** Provide explicit messages to users indicating the start and end of each phase (Night, Day, Voting).
 -   [ ] **Handle Bot Restarts:** Implement logic to gracefully handle bot restarts, potentially resuming games if state is persisted correctly (Advanced).
 -   [ ] **Action Feedback:** Provide confirmation messages when users submit actions and clear feedback if an action fails (e.g., target invalid, out of uses).
 
-## VIII. Testing
-
--   [ ] **Implement Unit Tests:** Write unit tests for core logic functions (e.g., role assignment shuffling, action priority sorting, win condition checks, utility functions, individual role action logic).
--   [ ] **Implement Integration Tests:** Write tests that simulate user interactions and verify game flow and state changes in the database across multiple phases and role interactions.
-
-## IX. Documentation
-
--   [ ] **Update `readme.md`:** Reflect the completed features and game flow once implemented.
--   [ ] **Update `PROJECT_SCOPE.md`:** Ensure it accurately describes the final state of each module.
--   [ ] **Add Developer Documentation:** Consider adding more detailed documentation on the game loop, state management, action resolution logic, and complex role interactions for future maintenance.
 
 ## X. Role-Specific Abilities (Detailed Implementation)
 

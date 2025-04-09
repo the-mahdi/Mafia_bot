@@ -7,6 +7,7 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.helpers import escape_markdown
 
 from src.database.connection import conn, cursor
+from src.database.user_queries import get_username, upsert_user
 from src.config import MAINTAINER_ID
 from src.game.setup.join import join_game
 from src.game.setup.start import start_game
@@ -26,23 +27,9 @@ async def handle_text_input(update: ContextTypes.DEFAULT_TYPE, context: ContextT
     user_id = update.effective_user.id
 
     if action == "awaiting_name":
-        # Handle name setting
-        cursor.execute("SELECT username FROM Users WHERE user_id = ?", (user_id,))
-        result = cursor.fetchone()
-        if result:
-            # Update the user's name if it's different
-            if result[0] != user_input:
-                cursor.execute("UPDATE Users SET username = ? WHERE user_id = ?", (user_input, user_id))
-                conn.commit()
-                context.user_data["username"] = user_input
-            else:
-                # Name is the same, no update needed
-                context.user_data["username"] = user_input
-        else:
-            # Insert new user into the database
-            cursor.execute("INSERT INTO Users (user_id, username) VALUES (?, ?)", (user_id, user_input))
-            conn.commit()
-            context.user_data["username"] = user_input
+        # Handle name setting using the centralized user_queries module
+        username = upsert_user(user_id, user_input)
+        context.user_data["username"] = username
         context.user_data["action"] = "join_game"  # Now expecting a passcode
         await context.bot.send_message(chat_id=update.effective_chat.id, text="Please enter the passcode to join the game.")
 
@@ -52,10 +39,9 @@ async def handle_text_input(update: ContextTypes.DEFAULT_TYPE, context: ContextT
             context.user_data["action"] = "join_game"
             await join_game(update, context, user_input)
         else:
-            # Update the user's name in the database
-            cursor.execute("UPDATE Users SET username = ? WHERE user_id = ?", (user_input, user_id))
-            conn.commit()
-            context.user_data["username"] = user_input
+            # Update the user's name using the centralized user_queries module
+            username = upsert_user(user_id, user_input)
+            context.user_data["username"] = username
             context.user_data["action"] = "join_game"
             await context.bot.send_message(chat_id=update.effective_chat.id, text="Name updated. Please enter the passcode to join the game.")
 

@@ -33,7 +33,7 @@ async def handle_increase_role(update: Update, context: ContextTypes.DEFAULT_TYP
         game_locks[game_id] = game_lock
     
     async with game_lock:
-        cursor.execute(
+        database.role_queries.update_game_role(
             "INSERT INTO GameRoles (game_id, role, count) VALUES (?, ?, 0) "
             "ON CONFLICT(game_id, role) DO UPDATE SET count = count + 1",
             (game_id, role)
@@ -64,11 +64,10 @@ async def handle_decrease_role(update: Update, context: ContextTypes.DEFAULT_TYP
         game_locks[game_id] = game_lock
     
     async with game_lock:
-        cursor.execute("SELECT count FROM GameRoles WHERE game_id = ? AND role = ?", (game_id, role))
-        result = cursor.fetchone()
+        current_count = database.role_queries.get_role_count(game_id, role)
         current_count = result[0] if result else 0
         if current_count > 0:
-            cursor.execute(
+            database.role_queries.decrement_role_count(
                 "UPDATE GameRoles SET count = count - 1 WHERE game_id = ? AND role = ?",
                 (game_id, role)
             )
@@ -116,13 +115,9 @@ async def handle_reset_roles(update: Update, context: ContextTypes.DEFAULT_TYPE)
         game_locks[game_id] = game_lock
     
     async with game_lock:
-        cursor.execute("DELETE FROM GameRoles WHERE game_id = ?", (game_id,))
-        # Initialize role counts to 0 for all roles
+        database.role_queries.reset_game_roles(game_id)
         for role in available_roles:
-            cursor.execute(
-                "INSERT INTO GameRoles (game_id, role, count) VALUES (?, ?, 0) "
-                "ON CONFLICT(game_id, role) DO UPDATE SET count=0",
-                (game_id, role)
+            database.role_queries.init_game_role(game_id, role)
             )
         conn.commit()
         context.user_data['current_page'] = 0
@@ -196,12 +191,7 @@ async def handle_template_selection(update: Update, context: ContextTypes.DEFAUL
     
     async with game_lock:
         for role, count in selected_template['roles'].items():
-            cursor.execute("""
-            INSERT INTO GameRoles (game_id, role, count)
-            VALUES (?, ?, ?)
-            ON CONFLICT(game_id, role)
-            DO UPDATE SET count=excluded.count
-            """, (game_id, role, count))
+            database.role_queries.update_game_role_from_template(game_id, role, count)
         conn.commit()
     
     await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Template '{template_name}' has been applied.")
