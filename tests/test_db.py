@@ -29,3 +29,19 @@ def test_get_player_count(memory_db, monkeypatch):
     memory_db.cursor.execute("INSERT INTO Roles (game_id, user_id, role) VALUES (?, ?, ?)", (game_id, 2, 'B'))
     memory_db.conn.commit()
     assert base.get_player_count(game_id) == 2
+
+
+def test_initialize_columns(memory_db):
+    memory_db.cursor.execute("PRAGMA table_info(Roles)")
+    role_cols = [c[1] for c in memory_db.cursor.fetchall()]
+    assert 'eliminated' in role_cols
+
+    memory_db.cursor.execute("PRAGMA table_info(Games)")
+    game_cols = [c[1] for c in memory_db.cursor.fetchall()]
+    assert 'randomness_method' in game_cols
+
+    memory_db.cursor.execute("INSERT INTO Games (game_id, passcode, moderator_id) VALUES (?, ?, ?)", ('g', 'p', 1))
+    memory_db.cursor.execute("INSERT INTO Roles (game_id, user_id, role) VALUES (?, ?, ?)", ('g', 1, 'A'))
+    memory_db.conn.commit()
+    memory_db.cursor.execute("SELECT eliminated FROM Roles WHERE game_id=? AND user_id=?", ('g', 1))
+    assert memory_db.cursor.fetchone()[0] == 0

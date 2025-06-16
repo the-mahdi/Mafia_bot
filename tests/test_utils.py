@@ -11,3 +11,8 @@ def test_generate_voting_summary():
     assert 'Alice' in summary
     assert 'Bob' in summary
     assert 'Players Who Have Voted' in summary
+
+
+def test_generate_voting_summary_empty():
+    summary = generate_voting_summary([], [])
+    assert 'None' in summary
