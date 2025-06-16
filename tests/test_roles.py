@@ -27,3 +27,13 @@ def test_load_roles(monkeypatch, tmp_path):
     saved = json.loads((tmp_path / 'role_templates.json').read_text())
     assert saved['templates'] == {'x': [1]}
     assert saved['pending_templates'] == {'y': []}
+
+
+def test_load_role_factions(monkeypatch, tmp_path):
+    roles_content = {"roles": [
+        {"name": "A", "description": "desc", "faction": "F1"},
+        {"name": "B", "description": "desc2", "faction": "F2"}
+    ]}
+    templates_content = {"templates": {}, "pending_templates": {}}
+    roles = reload_roles(monkeypatch, tmp_path, roles_content, templates_content)
+    assert roles.role_factions == {"A": "F1", "B": "F2"}
