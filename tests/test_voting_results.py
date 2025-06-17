@@ -61,3 +61,51 @@ def test_process_voting_results(monkeypatch, memory_db):
     # expect 8 messages: summary+detail to 3 players and moderator
     assert len(context.bot.sent) == 8
 
+
+def test_final_confirm_vote_triggers_results(monkeypatch, memory_db):
+    module = load_voting(monkeypatch, memory_db)
+    gid = setup_game(memory_db)
+    module.game_voting_data[gid] = {
+        'votes': {1: [2]},
+        'player_ids': [1, 2, 3],
+        'player_names': {1: 'mod', 2: 'A', 3: 'B'},
+        'summary_message_id': None,
+        'anonymous': False,
+        'voters': {1},
+        'permissions': {1: {'can_vote': True, 'can_be_voted': True},
+                        2: {'can_vote': True, 'can_be_voted': True},
+                        3: {'can_vote': True, 'can_be_voted': True}},
+    }
+
+    called_summary = []
+    async def fake_summary(ctx, gid_param):
+        called_summary.append(gid_param)
+
+    processed = []
+    async def fake_process(update, ctx, gid_param):
+        processed.append(gid_param)
+        module.game_voting_data.pop(gid_param, None)
+
+    monkeypatch.setattr(module, 'send_voting_summary', fake_summary)
+    monkeypatch.setattr(module, 'process_voting_results', fake_process)
+
+    query = types.SimpleNamespace(data=f"final_confirm_vote_{gid}",
+                                  message=types.SimpleNamespace(chat_id=1, message_id=1))
+    async def answer():
+        pass
+    async def edit_message_text(text):
+        query.edited = text
+    query.answer = answer
+    query.edit_message_text = edit_message_text
+
+    update = DummyUpdate(1)
+    update.callback_query = query
+    context = DummyContext()
+
+    asyncio.run(module.final_confirm_vote(update, context))
+
+    assert query.edited == "Your votes have been finally confirmed."
+    assert called_summary == [gid]
+    assert processed == [gid]
+    assert gid not in module.game_voting_data
+

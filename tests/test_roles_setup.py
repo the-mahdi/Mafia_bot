@@ -15,8 +15,12 @@ def load_roles_setup(monkeypatch):
 class DummyBot:
     def __init__(self):
         self.sent = []
+        self.edited = []
     async def send_message(self, *args, **kwargs):
         self.sent.append((args, kwargs))
+        return types.SimpleNamespace(message_id=1, **kwargs)
+    async def edit_message_text(self, *args, **kwargs):
+        self.edited.append(kwargs)
 
 class DummyUpdate:
     def __init__(self):
@@ -84,3 +88,35 @@ def test_confirm_and_set_roles_mismatch(monkeypatch, memory_db):
     memory_db.conn.commit()
     result = asyncio.run(run_confirm_and_set_roles(module, game_id))
     assert result == (False, 'Mismatch in roles and players')
+
+async def run_show_roles(module, context, page, message_id=None):
+    update = DummyUpdate()
+    context.user_data['current_page'] = page
+    return await module.show_role_buttons(update, context, message_id=message_id)
+
+
+def test_show_role_buttons_pagination(monkeypatch, memory_db):
+    module = load_roles_setup(monkeypatch)
+    # limit roles for predictability
+    roles = [f'R{i}' for i in range(6)]
+    monkeypatch.setattr(module, 'available_roles', roles)
+    monkeypatch.setattr(module, 'ROLES_PER_PAGE', 5)
+    game_id = setup_game(memory_db, roles[:2], [1, 1])
+
+    context = DummyContext()
+    context.user_data['game_id'] = game_id
+
+    # first page sends message
+    msg_id = asyncio.run(run_show_roles(module, context, 0))
+    assert context.bot.sent  # message sent
+    kb1 = context.bot.sent[0][1]['reply_markup'].inline_keyboard
+    data1 = [b.callback_data for row in kb1 for b in row]
+    assert 'next_page' in data1 and 'prev_page' not in data1
+
+    # second page edits message
+    asyncio.run(run_show_roles(module, context, 1, message_id=msg_id))
+    assert context.bot.edited
+    kb2 = context.bot.edited[0]['reply_markup'].inline_keyboard
+    data2 = [b.callback_data for row in kb2 for b in row]
+    assert 'prev_page' in data2 and 'next_page' not in data2
+
